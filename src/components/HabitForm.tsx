@@ -70,7 +70,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
       <Text style={styles.title}>{habit ? 'Edit Habit' : 'New Habit'}</Text>
 
       <Text style={styles.label}>Name</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Habit name" />
+      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Habit name" placeholderTextColor="#555" />
 
       <Text style={styles.label}>Type</Text>
       <View style={styles.row}>
@@ -109,6 +109,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
             onChangeText={setStars}
             keyboardType="decimal-pad"
             placeholder="1"
+            placeholderTextColor="#555"
           />
         </>
       )}
@@ -121,6 +122,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
             value={unit}
             onChangeText={setUnit}
             placeholder="mins, sets, meals..."
+            placeholderTextColor="#555"
           />
 
           <Text style={styles.label}>Tiers (value → stars)</Text>
@@ -132,6 +134,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
                 onChangeText={(v) => updateTier(i, 'value', v)}
                 keyboardType="decimal-pad"
                 placeholder="Value"
+                placeholderTextColor="#555"
               />
               <Text style={styles.tierArrow}>→</Text>
               <TextInput
@@ -140,8 +143,9 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
                 onChangeText={(v) => updateTier(i, 'stars', v)}
                 keyboardType="decimal-pad"
                 placeholder="Stars"
+                placeholderTextColor="#555"
               />
-              <Text>⭐</Text>
+              <Text style={styles.text}>⭐</Text>
             </View>
           ))}
 
@@ -152,21 +156,23 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
 
           {hasExtra && (
             <View style={styles.tierRow}>
-              <Text>Every </Text>
+              <Text style={styles.text}>Every </Text>
               <TextInput
                 style={[styles.input, styles.tierInput]}
                 value={extraPer}
                 onChangeText={setExtraPer}
                 keyboardType="decimal-pad"
+                placeholderTextColor="#555"
               />
-              <Text> {unit} →</Text>
+              <Text style={styles.text}> {unit} →</Text>
               <TextInput
                 style={[styles.input, styles.tierInput]}
                 value={extraStars}
                 onChangeText={setExtraStars}
                 keyboardType="decimal-pad"
+                placeholderTextColor="#555"
               />
-              <Text>⭐</Text>
+              <Text style={styles.text}>⭐</Text>
             </View>
           )}
         </>
@@ -185,16 +191,17 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 4, color: '#555' },
+  container: { padding: 20, backgroundColor: '#121212' },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: '#f0f0f0' },
+  label: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 4, color: '#9ca3af' },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#444',
     borderRadius: 8,
     padding: 10,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#1e1e1e',
+    color: '#f0f0f0',
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 6 },
   typeBtn: {
@@ -202,21 +209,22 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#444',
     alignItems: 'center',
   },
-  typeBtnActive: { borderColor: '#4f46e5', backgroundColor: '#eef2ff' },
-  typeBtnText: { fontSize: 14, color: '#666' },
-  typeBtnTextActive: { color: '#4f46e5', fontWeight: '600' },
+  typeBtnActive: { borderColor: '#6366f1', backgroundColor: '#1e1b4b' },
+  typeBtnText: { fontSize: 14, color: '#9ca3af' },
+  typeBtnTextActive: { color: '#818cf8', fontWeight: '600' },
   badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, fontSize: 12 },
-  goodBadge: { backgroundColor: '#dcfce7', color: '#16a34a' },
-  badBadge: { backgroundColor: '#fef2f2', color: '#dc2626' },
+  goodBadge: { backgroundColor: '#14532d', color: '#4ade80' },
+  badBadge: { backgroundColor: '#7f1d1d', color: '#f87171' },
   tierRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 4 },
   tierInput: { flex: 1 },
-  tierArrow: { fontSize: 18 },
+  tierArrow: { fontSize: 18, color: '#9ca3af' },
+  text: { color: '#f0f0f0' },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#4f46e5',
+    backgroundColor: '#6366f1',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
@@ -224,10 +232,10 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#2a2a2a',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
-  cancelBtnText: { color: '#666', fontSize: 16 },
+  cancelBtnText: { color: '#bbb', fontSize: 16 },
 });

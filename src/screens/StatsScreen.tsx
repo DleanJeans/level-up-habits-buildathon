@@ -102,8 +102,8 @@ export default function StatsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
-  header: { fontSize: 28, fontWeight: 'bold' },
+  container: { flex: 1, backgroundColor: '#121212', padding: 20 },
+  header: { fontSize: 28, fontWeight: 'bold', color: '#f0f0f0' },
   subtitle: { fontSize: 14, color: '#888', marginBottom: 20 },
   chartContainer: { flexDirection: 'row', marginBottom: 24 },
   yAxis: {
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingRight: 4,
   },
-  yLabel: { fontSize: 10, color: '#aaa' },
+  yLabel: { fontSize: 10, color: '#666' },
   barsContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -123,16 +123,16 @@ const styles = StyleSheet.create({
   barCol: { alignItems: 'center' },
   barWrapper: { justifyContent: 'flex-end' },
   bar: { borderRadius: 4 },
-  barValue: { fontSize: 10, color: '#4f46e5', fontWeight: '600', marginTop: 4 },
+  barValue: { fontSize: 10, color: '#818cf8', fontWeight: '600', marginTop: 4 },
   barLabel: { fontSize: 10, color: '#888', marginTop: 2 },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#1e1e1e',
     borderRadius: 12,
     padding: 16,
   },
   summaryItem: { alignItems: 'center' },
-  summaryValue: { fontSize: 22, fontWeight: 'bold', color: '#4f46e5' },
+  summaryValue: { fontSize: 22, fontWeight: 'bold', color: '#818cf8' },
   summaryLabel: { fontSize: 12, color: '#888', marginTop: 4 },
 });
