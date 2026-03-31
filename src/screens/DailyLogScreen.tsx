@@ -108,7 +108,7 @@ export default function DailyLogScreen() {
           >
             {log?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
           </TouchableOpacity>
-        ) : (
+        ) : (item.type === 'numeral' || item.type === 'tiered') ? (
           <View style={styles.stepper}>
             <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, -1)}>
               <Text style={styles.stepBtnText}>−</Text>
@@ -120,7 +120,7 @@ export default function DailyLogScreen() {
               <Text style={styles.stepBtnText}>+</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
       </View>
     );
   }

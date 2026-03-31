@@ -171,24 +171,31 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
 
           <Text style={styles.label}>Conversion rate</Text>
           <View style={styles.tierRow}>
-            <TextInput
-              style={[styles.input, styles.tierInput]}
-              value={convPer}
-              onChangeText={setConvPer}
-              keyboardType="decimal-pad"
-              placeholder="1"
-              placeholderTextColor="#555"
-            />
-            <Text style={styles.text}> {unit} =</Text>
-            <TextInput
-              style={[styles.input, styles.tierInput]}
-              value={convStars}
-              onChangeText={setConvStars}
-              keyboardType="decimal-pad"
-              placeholder="1"
-              placeholderTextColor="#555"
-            />
-            <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+            <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
+              <TextInput
+                style={styles.innerInput}
+                value={convPer}
+                onChangeText={setConvPer}
+                keyboardType="decimal-pad"
+                placeholder="1"
+                placeholderTextColor="#555"
+              />
+              <Text style={styles.inputSuffix} numberOfLines={1}>{unit}</Text>
+            </View>
+
+            <Text style={styles.text}>=</Text>
+            
+            <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
+              <TextInput
+                style={styles.innerInput}
+                value={convStars}
+                onChangeText={setConvStars}
+                keyboardType="decimal-pad"
+                placeholder="1"
+                placeholderTextColor="#555"
+              />
+              <MaterialCommunityIcons name="star" size={16} color="#facc15" style={{ paddingRight: 10 }} />
+            </View>
           </View>
         </>
       )}
@@ -303,6 +310,9 @@ const styles = StyleSheet.create({
   badBadgeText: { color: '#f87171' },
   tierRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 4 },
   tierInput: { flex: 1 },
+  inputWithSuffix: { flexDirection: 'row', alignItems: 'center', padding: 0 },
+  innerInput: { flex: 1, padding: 10, fontSize: 16, color: '#f0f0f0' },
+  inputSuffix: { paddingRight: 10, fontSize: 14, color: '#555' },
   tierArrow: { fontSize: 18, color: '#9ca3af' },
   text: { color: '#f0f0f0' },
   saveBtn: {

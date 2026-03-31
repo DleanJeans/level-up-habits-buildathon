@@ -8,6 +8,15 @@ export function calculateStars(habit: Habit, logValue: number | boolean): number
       stars = habit.stars;
     }
   } else if (habit.type === 'numeral') {
+    // Flat conversion: every X units = Y stars
+    const val = typeof logValue === 'number' ? logValue : 0;
+    if (val <= 0) return 0;
+
+    const conv = habit.conversion;
+    if (conv && conv.per > 0) {
+      stars = Math.floor(val / conv.per) * conv.stars;
+    }
+  } else if (habit.type === 'tiered') {
     const val = typeof logValue === 'number' ? logValue : 0;
     if (val <= 0) return 0;
 
