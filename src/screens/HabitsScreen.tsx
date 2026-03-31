@@ -64,11 +64,20 @@ export default function HabitsScreen() {
         <View style={styles.habitInfo}>
           <View style={styles.habitNameRow}>
             <MaterialCommunityIcons
-              name={item.type === 'checkbox' ? 'checkbox-marked-outline' : item.type === 'numeral' ? 'numeric' : 'stairs-up'}
+              name={
+                item.type === 'checkbox' ? 'checkbox-marked-outline' :
+                item.type === 'numeral' ? 'numeric' :
+                item.type === 'time-based' ? 'clock-outline' : 'stairs-up'
+              }
               size={16}
               color="#9ca3af"
             />
             <Text style={styles.habitName}> {item.name}</Text>
+            {(item.frequency && item.frequency !== 'daily') && (
+              <View style={styles.freqBadge}>
+                <Text style={styles.freqBadgeText}>{item.frequency}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.habitMetaRow}>
             {!item.isGood && (
@@ -85,6 +94,10 @@ export default function HabitsScreen() {
             ) : item.type === 'numeral' ? (
               <Text style={styles.habitMeta}>
                 {`${item.conversion?.per || 1} ${item.unit || ''} = ${item.conversion?.stars || 1}⭐`}
+              </Text>
+            ) : item.type === 'time-based' ? (
+              <Text style={styles.habitMeta}>
+                {`${item.timeFrames?.length || 0} time frames`}
               </Text>
             ) : (
               <Text style={styles.habitMeta}>
@@ -164,6 +177,8 @@ const styles = StyleSheet.create({
   starsMetaRow: { flexDirection: 'row', alignItems: 'center' },
   habitMeta: { fontSize: 12, color: '#888' },
   badText: { color: '#f87171' },
+  freqBadge: { marginLeft: 6, backgroundColor: '#1e1b4b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  freqBadgeText: { fontSize: 10, color: '#818cf8', fontWeight: '600' },
   deleteBtn: { padding: 10, marginRight: -6 },
   deleteBtnText: { fontSize: 18 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },

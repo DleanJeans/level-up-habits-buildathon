@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Habit, HabitType, Tier, ExtraRule } from '../models/types';
+import { Habit, HabitType, Tier, ExtraRule, TimeFrame, Frequency } from '../models/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -41,6 +41,19 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
   const [hasExtra, setHasExtra] = useState(!!habit?.extraRule);
   const [extraPer, setExtraPer] = useState(String(habit?.extraRule?.per ?? 10));
   const [extraStars, setExtraStars] = useState(String(habit?.extraRule?.stars ?? 1));
+  // Starting stars & threshold
+  const [hasStartingStars, setHasStartingStars] = useState((habit?.startingStars ?? 0) > 0);
+  const [startingStars, setStartingStars] = useState(String(habit?.startingStars ?? 1));
+  const [extraThreshold, setExtraThreshold] = useState(String(habit?.extraThreshold ?? 0));
+  // Time-based state
+  const [timeFrames, setTimeFrames] = useState<TimeFrame[]>(
+    habit?.timeFrames || [
+      { startHour: 6, endHour: 12, stars: 3 },
+      { startHour: 12, endHour: 18, stars: 2 },
+    ]
+  );
+  // Frequency state
+  const [frequency, setFrequency] = useState<Frequency>(habit?.frequency || 'daily');
 
   function handleSave() {
     if (!name.trim()) return;
@@ -51,7 +64,14 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
       type,
       isGood,
       stars: parseFloat(stars) || 1,
+      frequency,
     };
+
+    // Starting stars (for numeral/tiered)
+    if ((type === 'numeral' || type === 'tiered') && hasStartingStars) {
+      h.startingStars = parseFloat(startingStars) || 0;
+      h.extraThreshold = parseFloat(extraThreshold) || 0;
+    }
 
     if (type === 'numeral') {
       h.unit = unit;
@@ -68,6 +88,12 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
       h.extraRule = hasExtra
         ? { per: parseFloat(extraPer) || 1, stars: parseFloat(extraStars) || 1 }
         : null;
+    } else if (type === 'time-based') {
+      h.timeFrames = timeFrames.map((f) => ({
+        startHour: Math.max(0, Math.min(23, Math.round(f.startHour))),
+        endHour: Math.max(0, Math.min(23, Math.round(f.endHour))),
+        stars: parseFloat(String(f.stars)) || 1,
+      }));
     }
 
     onSave(h);
@@ -77,6 +103,20 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
     const newTiers = [...tiers];
     newTiers[index] = { ...newTiers[index], [field]: val };
     setTiers(newTiers);
+  }
+
+  function updateTimeFrame(index: number, field: keyof TimeFrame, val: string) {
+    const newFrames = [...timeFrames];
+    newFrames[index] = { ...newFrames[index], [field]: parseFloat(val) || 0 };
+    setTimeFrames(newFrames);
+  }
+
+  function addTimeFrame() {
+    setTimeFrames([...timeFrames, { startHour: 0, endHour: 23, stars: 1 }]);
+  }
+
+  function removeTimeFrame(index: number) {
+    setTimeFrames(timeFrames.filter((_, i) => i !== index));
   }
 
   return (
@@ -134,6 +174,19 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
               color={type === 'tiered' ? '#818cf8' : '#9ca3af'}
             />
             <Text style={[styles.typeBtnText, type === 'tiered' && styles.typeBtnTextActive]}> Tiered</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.typeBtn, type === 'time-based' && styles.typeBtnActive]}
+          onPress={() => setType('time-based')}
+        >
+          <View style={styles.typeBtnContent}>
+            <MaterialCommunityIcons
+              name="clock-outline"
+              size={15}
+              color={type === 'time-based' ? '#818cf8' : '#9ca3af'}
+            />
+            <Text style={[styles.typeBtnText, type === 'time-based' && styles.typeBtnTextActive]}> Time</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -276,6 +329,119 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
         </>
       )}
 
+      {type === 'time-based' && (
+        <>
+          <View style={styles.starsLabelRow}>
+            <Text style={styles.starsLabel}>Fallback Stars</Text>
+            <MaterialCommunityIcons name="star" size={14} color="#facc15" />
+          </View>
+          <TextInput
+            style={styles.input}
+            value={stars}
+            onChangeText={setStars}
+            keyboardType="decimal-pad"
+            placeholder="1"
+            placeholderTextColor="#555"
+          />
+
+          <Text style={styles.label}>Time Frames</Text>
+          {timeFrames.map((frame, i) => (
+            <View key={i} style={styles.timeFrameRow}>
+              <View style={styles.timeFrameInputs}>
+                <TextInput
+                  style={[styles.input, styles.timeInput]}
+                  value={String(frame.startHour)}
+                  onChangeText={(v) => updateTimeFrame(i, 'startHour', v)}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor="#555"
+                />
+                <Text style={styles.text}>h –</Text>
+                <TextInput
+                  style={[styles.input, styles.timeInput]}
+                  value={String(frame.endHour)}
+                  onChangeText={(v) => updateTimeFrame(i, 'endHour', v)}
+                  keyboardType="number-pad"
+                  placeholder="23"
+                  placeholderTextColor="#555"
+                />
+                <Text style={styles.text}>h →</Text>
+                <TextInput
+                  style={[styles.input, styles.timeInput]}
+                  value={String(frame.stars)}
+                  onChangeText={(v) => updateTimeFrame(i, 'stars', v)}
+                  keyboardType="decimal-pad"
+                  placeholder="1"
+                  placeholderTextColor="#555"
+                />
+                <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+              </View>
+              {timeFrames.length > 1 && (
+                <TouchableOpacity onPress={() => removeTimeFrame(i)} style={styles.removeFrameBtn}>
+                  <MaterialCommunityIcons name="close-circle" size={20} color="#f87171" />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+          <TouchableOpacity style={styles.addFrameBtn} onPress={addTimeFrame}>
+            <MaterialCommunityIcons name="plus-circle-outline" size={18} color="#818cf8" />
+            <Text style={styles.addFrameText}>Add time frame</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {(type === 'numeral' || type === 'tiered') && (
+        <>
+          <View style={styles.row}>
+            <Text style={styles.label}>Starting stars</Text>
+            <Switch value={hasStartingStars} onValueChange={setHasStartingStars} />
+          </View>
+          {hasStartingStars && (
+            <>
+              <View style={styles.tierRow}>
+                <Text style={styles.text}>Start = </Text>
+                <TextInput
+                  style={[styles.input, styles.tierInput]}
+                  value={startingStars}
+                  onChangeText={setStartingStars}
+                  keyboardType="decimal-pad"
+                  placeholder="1"
+                  placeholderTextColor="#555"
+                />
+                <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+              </View>
+              <View style={styles.tierRow}>
+                <Text style={styles.text}>Skip first </Text>
+                <TextInput
+                  style={[styles.input, styles.tierInput]}
+                  value={extraThreshold}
+                  onChangeText={setExtraThreshold}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor="#555"
+                />
+                <Text style={styles.text}> {unit}</Text>
+              </View>
+            </>
+          )}
+        </>
+      )}
+
+      <Text style={styles.label}>Frequency</Text>
+      <View style={styles.row}>
+        {(['daily', 'weekly', 'monthly', 'yearly'] as Frequency[]).map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.freqBtn, frequency === f && styles.freqBtnActive]}
+            onPress={() => setFrequency(f)}
+          >
+            <Text style={[styles.freqBtnText, frequency === f && styles.freqBtnTextActive]}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={[styles.row, { marginTop: 24, marginBottom: 16 }]}>
         <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
           <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -356,4 +522,21 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: '#bbb', fontSize: 16 },
   starsLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 6 },
   starsLabel: { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
+  timeFrameRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 4 },
+  timeFrameInputs: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeInput: { flex: 1, textAlign: 'center' },
+  removeFrameBtn: { padding: 6, marginLeft: 4 },
+  addFrameBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8 },
+  addFrameText: { color: '#818cf8', fontSize: 14, fontWeight: '500' },
+  freqBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+    alignItems: 'center',
+  },
+  freqBtnActive: { borderColor: '#6366f1', backgroundColor: '#1e1b4b' },
+  freqBtnText: { fontSize: 12, color: '#9ca3af' },
+  freqBtnTextActive: { color: '#818cf8', fontWeight: '600' },
 });

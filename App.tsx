@@ -5,6 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DailyLogScreen from './src/screens/DailyLogScreen';
 import HabitsScreen from './src/screens/HabitsScreen';
+import TimelineScreen from './src/screens/TimelineScreen';
+import StatsScreen from './src/screens/StatsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -42,6 +44,24 @@ export default function App() {
               <MaterialCommunityIcons name="calendar-today" size={22} color={color} />
             ),
             headerTitle: 'Level Up Habits',
+          }}
+        />
+        <Tab.Screen
+          name="Timeline"
+          component={TimelineScreen}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <MaterialCommunityIcons name="timeline-clock-outline" size={22} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Stats"
+          component={StatsScreen}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <MaterialCommunityIcons name="chart-bar" size={22} color={color} />
+            ),
           }}
         />
         <Tab.Screen

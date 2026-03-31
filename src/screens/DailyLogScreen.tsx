@@ -7,13 +7,24 @@ import {
   TextInput,
   StyleSheet,
   Platform,
+  SectionList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { Habit, HabitLog } from '../models/types';
-import { getHabits, getLogsForDate, saveLog, formatDate } from '../store/storage';
+import { Habit, HabitLog, Task } from '../models/types';
+import {
+  getHabits,
+  getLogsForDate,
+  saveLog,
+  formatDate,
+  getTasksForDate,
+  saveTask,
+  deleteTask,
+  toggleTask,
+} from '../store/storage';
 import { calculateStars } from '../store/starCalculator';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function DailyLogScreen() {
   const insets = useSafeAreaInsets();
@@ -23,16 +34,29 @@ export default function DailyLogScreen() {
   const [totalStars, setTotalStars] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
+  // Tasks
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newTaskStars, setNewTaskStars] = useState('1');
 
   const dateStr = formatDate(currentDate);
 
   const loadData = useCallback(async () => {
-    const [h, l] = await Promise.all([getHabits(), getLogsForDate(dateStr)]);
-    setHabits(h);
+    const [h, l, t] = await Promise.all([
+      getHabits(),
+      getLogsForDate(dateStr),
+      getTasksForDate(dateStr),
+    ]);
+    // Filter to daily habits only (non-daily habits don't show on daily view)
+    const dailyHabits = h.filter((habit) => (habit.frequency || 'daily') === 'daily');
+    setHabits(dailyHabits);
     const logMap = new Map<string, HabitLog>();
     l.forEach((log) => logMap.set(log.habitId, log));
     setLogs(logMap);
-    setTotalStars(l.reduce((sum, log) => sum + log.starsEarned, 0));
+    setTasks(t);
+    const logStars = l.reduce((sum, log) => sum + log.starsEarned, 0);
+    const taskStars = t.filter((task) => task.completed).reduce((sum, task) => sum + task.stars, 0);
+    setTotalStars(logStars + taskStars);
   }, [dateStr]);
 
   useFocusEffect(
@@ -44,13 +68,15 @@ export default function DailyLogScreen() {
   async function toggleCheckbox(habit: Habit) {
     const existing = logs.get(habit.id);
     const newValue = existing ? !existing.value : true;
-    const starsEarned = newValue ? calculateStars(habit, true) : 0;
+    const now = new Date().toISOString();
+    const starsEarned = newValue ? calculateStars(habit, true, now) : 0;
 
     const log: HabitLog = {
       habitId: habit.id,
       date: dateStr,
       value: newValue,
       starsEarned,
+      loggedAt: now,
     };
     await saveLog(log);
     loadData();
@@ -64,6 +90,7 @@ export default function DailyLogScreen() {
       date: dateStr,
       value: clamped,
       starsEarned,
+      loggedAt: new Date().toISOString(),
     };
     await saveLog(log);
     loadData();
@@ -80,8 +107,54 @@ export default function DailyLogScreen() {
       date: dateStr,
       value: newVal,
       starsEarned,
+      loggedAt: new Date().toISOString(),
     };
     await saveLog(log);
+    loadData();
+  }
+
+  // --- Time-based habit: log as checked with current time ---
+  async function toggleTimeBased(habit: Habit) {
+    const existing = logs.get(habit.id);
+    const newValue = existing ? !existing.value : true;
+    const now = new Date().toISOString();
+    const starsEarned = newValue ? calculateStars(habit, true, now) : 0;
+
+    const log: HabitLog = {
+      habitId: habit.id,
+      date: dateStr,
+      value: newValue,
+      starsEarned,
+      loggedAt: now,
+    };
+    await saveLog(log);
+    loadData();
+  }
+
+  // --- Task functions ---
+  async function handleAddTask() {
+    if (!newTaskName.trim()) return;
+    const task: Task = {
+      id: uuidv4(),
+      name: newTaskName.trim(),
+      stars: parseFloat(newTaskStars) || 1,
+      completed: false,
+      date: dateStr,
+      createdAt: new Date().toISOString(),
+    };
+    await saveTask(task);
+    setNewTaskName('');
+    setNewTaskStars('1');
+    loadData();
+  }
+
+  async function handleToggleTask(id: string) {
+    await toggleTask(id, dateStr);
+    loadData();
+  }
+
+  async function handleDeleteTask(id: string) {
+    await deleteTask(id, dateStr);
     loadData();
   }
 
@@ -127,6 +200,17 @@ export default function DailyLogScreen() {
             onPress={() => toggleCheckbox(item)}
           >
             {log?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
+          </TouchableOpacity>
+        ) : item.type === 'time-based' ? (
+          <TouchableOpacity
+            style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
+            onPress={() => toggleTimeBased(item)}
+          >
+            {log?.value === true ? (
+              <MaterialCommunityIcons name="check" size={18} color="#fff" />
+            ) : (
+              <MaterialCommunityIcons name="clock-outline" size={18} color="#555" />
+            )}
           </TouchableOpacity>
         ) : (item.type === 'numeral' || item.type === 'tiered') ? (
           <View style={styles.stepper}>
@@ -198,7 +282,7 @@ export default function DailyLogScreen() {
         </View>
       </View>
 
-      {habits.length === 0 ? (
+      {habits.length === 0 && tasks.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No habits yet. Go to Habits tab to add some!</Text>
         </View>
@@ -209,6 +293,54 @@ export default function DailyLogScreen() {
           renderItem={renderHabitItem}
           contentContainerStyle={[styles.list, { paddingBottom: 24 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            <View style={styles.tasksSection}>
+              <Text style={styles.sectionTitle}>Tasks</Text>
+              {tasks.map((task) => (
+                <View key={task.id} style={[styles.taskRow, task.completed && styles.taskCompleted]}>
+                  <TouchableOpacity
+                    style={[styles.checkbox, task.completed && styles.checkboxChecked]}
+                    onPress={() => handleToggleTask(task.id)}
+                  >
+                    {task.completed && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
+                  </TouchableOpacity>
+                  <View style={styles.taskInfo}>
+                    <Text style={[styles.habitName, task.completed && styles.taskDoneText]}>{task.name}</Text>
+                  </View>
+                  <View style={styles.starRow}>
+                    <Text style={[styles.starText, task.completed && styles.taskDoneText]}>
+                      +{task.stars.toFixed(2).replace(/\.?0+$/, '')}
+                    </Text>
+                    <MaterialCommunityIcons name="star" size={13} color="#facc15" />
+                  </View>
+                  <TouchableOpacity onPress={() => handleDeleteTask(task.id)} style={styles.taskDeleteBtn}>
+                    <MaterialCommunityIcons name="close" size={18} color="#555" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <View style={styles.addTaskRow}>
+                <TextInput
+                  style={[styles.addTaskInput, { flex: 1 }]}
+                  value={newTaskName}
+                  onChangeText={setNewTaskName}
+                  placeholder="New task..."
+                  placeholderTextColor="#555"
+                  onSubmitEditing={handleAddTask}
+                />
+                <TextInput
+                  style={[styles.addTaskInput, { width: 50, textAlign: 'center' }]}
+                  value={newTaskStars}
+                  onChangeText={setNewTaskStars}
+                  keyboardType="decimal-pad"
+                  placeholder="★"
+                  placeholderTextColor="#555"
+                />
+                <TouchableOpacity style={styles.addTaskBtn} onPress={handleAddTask}>
+                  <MaterialCommunityIcons name="plus" size={22} color="#818cf8" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          }
         />
       )}
     </View>
@@ -284,4 +416,40 @@ const styles = StyleSheet.create({
   stepValueInput: { fontSize: 15, fontWeight: '500', width: 40, flexGrow: 0, textAlign: 'center', color: '#f0f0f0', borderBottomWidth: 1, borderBottomColor: '#818cf8', paddingVertical: 2 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#555', fontSize: 16, textAlign: 'center', paddingHorizontal: 40 },
+  // Tasks section
+  tasksSection: { marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#2a2a2a' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#9ca3af', marginBottom: 8 },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginVertical: 3,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 10,
+    minHeight: 52,
+  },
+  taskCompleted: { opacity: 0.6 },
+  taskInfo: { flex: 1, marginLeft: 12 },
+  taskDoneText: { textDecorationLine: 'line-through', color: '#888' },
+  taskDeleteBtn: { padding: 8 },
+  addTaskRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  addTaskInput: {
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: '#1e1e1e',
+    color: '#f0f0f0',
+  },
+  addTaskBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1e1b4b',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Habit, HabitLog } from '../models/types';
+import { Habit, HabitLog, Task } from '../models/types';
 
 const HABITS_KEY = 'habits';
 const LOGS_PREFIX = 'logs_';
+const TASKS_PREFIX = 'tasks_';
 
 // --- Habits ---
 
@@ -56,17 +57,63 @@ export async function deleteLog(habitId: string, date: string): Promise<void> {
   await AsyncStorage.setItem(logsKey(date), JSON.stringify(filtered));
 }
 
+// --- Tasks ---
+
+function tasksKey(date: string): string {
+  return `${TASKS_PREFIX}${date}`;
+}
+
+export async function getTasksForDate(date: string): Promise<Task[]> {
+  const json = await AsyncStorage.getItem(tasksKey(date));
+  return json ? JSON.parse(json) : [];
+}
+
+export async function saveTask(task: Task): Promise<void> {
+  const tasks = await getTasksForDate(task.date);
+  const idx = tasks.findIndex((t) => t.id === task.id);
+  if (idx >= 0) {
+    tasks[idx] = task;
+  } else {
+    tasks.push(task);
+  }
+  await AsyncStorage.setItem(tasksKey(task.date), JSON.stringify(tasks));
+}
+
+export async function deleteTask(id: string, date: string): Promise<void> {
+  const tasks = await getTasksForDate(date);
+  const filtered = tasks.filter((t) => t.id !== id);
+  await AsyncStorage.setItem(tasksKey(date), JSON.stringify(filtered));
+}
+
+export async function toggleTask(id: string, date: string): Promise<Task | null> {
+  const tasks = await getTasksForDate(date);
+  const idx = tasks.findIndex((t) => t.id === id);
+  if (idx < 0) return null;
+  tasks[idx] = { ...tasks[idx], completed: !tasks[idx].completed };
+  await AsyncStorage.setItem(tasksKey(date), JSON.stringify(tasks));
+  return tasks[idx];
+}
+
 // --- Day totals ---
 
 export async function getDayTotal(date: string): Promise<number> {
-  const logs = await getLogsForDate(date);
-  return logs.reduce((sum, l) => sum + l.starsEarned, 0);
+  const [logs, tasks] = await Promise.all([
+    getLogsForDate(date),
+    getTasksForDate(date),
+  ]);
+  const logStars = logs.reduce((sum, l) => sum + l.starsEarned, 0);
+  const taskStars = tasks
+    .filter((t) => t.completed)
+    .reduce((sum, t) => sum + t.stars, 0);
+  return logStars + taskStars;
 }
 
-export async function getLast7DayTotals(): Promise<{ date: string; totalStars: number }[]> {
+export async function getLastNDayTotals(
+  n: number,
+): Promise<{ date: string; totalStars: number }[]> {
   const results: { date: string; totalStars: number }[] = [];
   const today = new Date();
-  for (let i = 6; i >= 0; i--) {
+  for (let i = n - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const dateStr = formatDate(d);
@@ -74,6 +121,10 @@ export async function getLast7DayTotals(): Promise<{ date: string; totalStars: n
     results.push({ date: dateStr, totalStars: total });
   }
   return results;
+}
+
+export async function getLast7DayTotals(): Promise<{ date: string; totalStars: number }[]> {
+  return getLastNDayTotals(7);
 }
 
 export function formatDate(d: Date): string {
