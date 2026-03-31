@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Habit, HabitLog } from '../models/types';
 import { getHabits, getLogsForDate, saveLog, formatDate } from '../store/storage';
 import { calculateStars } from '../store/starCalculator';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function DailyLogScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -91,10 +92,13 @@ export default function DailyLogScreen() {
       <View style={[styles.habitRow, isBad && styles.badRow]}>
         <View style={styles.habitInfo}>
           <Text style={[styles.habitName, isBad && styles.badText]}>{item.name}</Text>
-          <Text style={[styles.starText, starsEarned < 0 && styles.negativeStars]}>
-            {starsEarned > 0 ? '+' : ''}
-            {starsEarned.toFixed(2).replace(/\.?0+$/, '')}⭐
-          </Text>
+          <View style={styles.starRow}>
+            <Text style={[styles.starText, starsEarned < 0 && styles.negativeStars]}>
+              {starsEarned > 0 ? '+' : ''}
+              {starsEarned.toFixed(2).replace(/\.?0+$/, '')}
+            </Text>
+            <MaterialCommunityIcons name="star" size={13} color="#facc15" />
+          </View>
         </View>
 
         {item.type === 'checkbox' ? (
@@ -102,7 +106,7 @@ export default function DailyLogScreen() {
             style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
             onPress={() => toggleCheckbox(item)}
           >
-            <Text style={styles.checkboxText}>{log?.value === true ? '✓' : ''}</Text>
+            {log?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
           </TouchableOpacity>
         ) : (
           <View style={styles.stepper}>
@@ -126,20 +130,23 @@ export default function DailyLogScreen() {
       {/* Date navigation */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={() => changeDate(-1)}>
-          <Text style={styles.dateArrow}>◀</Text>
+          <MaterialCommunityIcons name="chevron-left" size={28} color="#818cf8" style={styles.dateArrow} />
         </TouchableOpacity>
         <Text style={styles.dateText}>{formatDisplayDate(currentDate)}</Text>
         <TouchableOpacity onPress={() => changeDate(1)}>
-          <Text style={styles.dateArrow}>▶</Text>
+          <MaterialCommunityIcons name="chevron-right" size={28} color="#818cf8" style={styles.dateArrow} />
         </TouchableOpacity>
       </View>
 
       {/* Daily star total */}
       <View style={styles.totalBox}>
         <Text style={styles.totalLabel}>Daily Stars</Text>
-        <Text style={styles.totalValue}>
-          {totalStars.toFixed(2).replace(/\.?0+$/, '')} ⭐
-        </Text>
+        <View style={styles.totalValueRow}>
+          <Text style={styles.totalValue}>
+            {totalStars.toFixed(2).replace(/\.?0+$/, '')}
+          </Text>
+          <MaterialCommunityIcons name="star" size={28} color="#fbbf24" />
+        </View>
       </View>
 
       {habits.length === 0 ? (
@@ -167,7 +174,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap: 20,
   },
-  dateArrow: { fontSize: 20, color: '#818cf8', padding: 8 },
+  dateArrow: { padding: 8 },
+  totalValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dateText: { fontSize: 18, fontWeight: '600', color: '#f0f0f0' },
   totalBox: {
     margin: 16,
@@ -193,7 +201,8 @@ const styles = StyleSheet.create({
   habitInfo: { flex: 1 },
   habitName: { fontSize: 16, fontWeight: '500', color: '#f0f0f0' },
   badText: { color: '#f87171' },
-  starText: { fontSize: 13, color: '#4ade80', marginTop: 2 },
+  starRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  starText: { fontSize: 13, color: '#4ade80' },
   negativeStars: { color: '#f87171' },
   checkbox: {
     width: 32,

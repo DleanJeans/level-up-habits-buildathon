@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Habit } from '../models/types';
 import { getHabits, saveHabit, deleteHabit } from '../store/storage';
 import HabitForm from '../components/HabitForm';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function HabitsScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -59,18 +60,39 @@ export default function HabitsScreen() {
     return (
       <TouchableOpacity style={styles.habitRow} onPress={() => handleEdit(item)}>
         <View style={styles.habitInfo}>
-          <Text style={styles.habitName}>
-            {item.type === 'checkbox' ? '☑️' : '🔢'} {item.name}
-          </Text>
-          <Text style={[styles.habitMeta, !item.isGood && styles.badText]}>
-            {item.isGood ? '' : '❌ Bad · '}
-            {item.type === 'checkbox'
-              ? `${item.stars}⭐`
-              : `${item.tiers?.length || 0} tiers · ${item.unit || ''}`}
-          </Text>
+          <View style={styles.habitNameRow}>
+            <MaterialCommunityIcons
+              name={item.type === 'checkbox' ? 'checkbox-marked-outline' : item.type === 'numeral' ? 'numeric' : 'stairs-up'}
+              size={16}
+              color="#9ca3af"
+            />
+            <Text style={styles.habitName}> {item.name}</Text>
+          </View>
+          <View style={styles.habitMetaRow}>
+            {!item.isGood && (
+              <View style={styles.starsMetaRow}>
+                <MaterialCommunityIcons name="close-circle" size={12} color="#f87171" />
+                <Text style={[styles.habitMeta, styles.badText]}> Bad · </Text>
+              </View>
+            )}
+            {item.type === 'checkbox' ? (
+              <View style={styles.starsMetaRow}>
+                <Text style={styles.habitMeta}>{item.stars}</Text>
+                <MaterialCommunityIcons name="star" size={12} color="#facc15" />
+              </View>
+            ) : item.type === 'numeral' ? (
+              <Text style={styles.habitMeta}>
+                {`${item.conversion?.per || 1} ${item.unit || ''} = ${item.conversion?.stars || 1}⭐`}
+              </Text>
+            ) : (
+              <Text style={styles.habitMeta}>
+                {`${item.tiers?.length || 0} tiers · ${item.unit || ''}`}
+              </Text>
+            )}
+          </View>
         </View>
         <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-          <Text style={styles.deleteBtnText}>🗑️</Text>
+          <MaterialCommunityIcons name="delete-outline" size={22} color="#9ca3af" />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -100,7 +122,7 @@ export default function HabitsScreen() {
           setShowForm(true);
         }}
       >
-        <Text style={styles.fabText}>+</Text>
+        <MaterialCommunityIcons name="plus" size={28} color="#fff" />
       </TouchableOpacity>
 
       <Modal visible={showForm} animationType="slide" presentationStyle="pageSheet">
@@ -130,8 +152,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   habitInfo: { flex: 1 },
+  habitNameRow: { flexDirection: 'row', alignItems: 'center' },
   habitName: { fontSize: 16, fontWeight: '500', color: '#f0f0f0' },
-  habitMeta: { fontSize: 12, color: '#888', marginTop: 2 },
+  habitMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  starsMetaRow: { flexDirection: 'row', alignItems: 'center' },
+  habitMeta: { fontSize: 12, color: '#888' },
   badText: { color: '#f87171' },
   deleteBtn: { padding: 8 },
   deleteBtnText: { fontSize: 18 },

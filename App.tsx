@@ -1,8 +1,8 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DailyLogScreen from './src/screens/DailyLogScreen';
 import HabitsScreen from './src/screens/HabitsScreen';
 
@@ -33,7 +33,9 @@ export default function App() {
           name="Today"
           component={DailyLogScreen}
           options={{
-            tabBarIcon: () => <Text style={{ fontSize: 20 }}>📅</Text>,
+            tabBarIcon: ({ color }) => (
+              <MaterialCommunityIcons name="calendar-today" size={22} color={color} />
+            ),
             headerTitle: 'Level Up Habits',
           }}
         />
@@ -41,7 +43,9 @@ export default function App() {
           name="Habits"
           component={HabitsScreen}
           options={{
-            tabBarIcon: () => <Text style={{ fontSize: 20 }}>⚡</Text>,
+            tabBarIcon: ({ color }) => (
+              <MaterialCommunityIcons name="lightning-bolt" size={22} color={color} />
+            ),
           }}
         />
       </Tab.Navigator>

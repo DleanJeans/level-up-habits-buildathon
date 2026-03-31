@@ -9,6 +9,7 @@ import {
   Switch,
 } from 'react-native';
 import { Habit, HabitType, Tier, ExtraRule } from '../models/types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { v4 as uuidv4 } from 'uuid';
 
 interface Props {
@@ -23,6 +24,10 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
   const [isGood, setIsGood] = useState(habit?.isGood ?? true);
   const [stars, setStars] = useState(String(habit?.stars ?? 1));
   const [unit, setUnit] = useState(habit?.unit || 'mins');
+  // Numeral (flat conversion) state
+  const [convPer, setConvPer] = useState(String(habit?.conversion?.per ?? 1));
+  const [convStars, setConvStars] = useState(String(habit?.conversion?.stars ?? 1));
+  // Tiered state
   const [tiers, setTiers] = useState<Tier[]>(
     habit?.tiers || [
       { value: 1, stars: 1 },
@@ -46,6 +51,12 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
     };
 
     if (type === 'numeral') {
+      h.unit = unit;
+      h.conversion = {
+        per: parseFloat(convPer) || 1,
+        stars: parseFloat(convStars) || 1,
+      };
+    } else if (type === 'tiered') {
       h.unit = unit;
       h.tiers = tiers.map((t) => ({
         value: parseFloat(String(t.value)) || 0,
@@ -78,31 +89,64 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
           style={[styles.typeBtn, type === 'checkbox' && styles.typeBtnActive]}
           onPress={() => setType('checkbox')}
         >
-          <Text style={[styles.typeBtnText, type === 'checkbox' && styles.typeBtnTextActive]}>
-            ☑️ Checkbox
-          </Text>
+          <View style={styles.typeBtnContent}>
+            <MaterialCommunityIcons
+              name="checkbox-marked-outline"
+              size={15}
+              color={type === 'checkbox' ? '#818cf8' : '#9ca3af'}
+            />
+            <Text style={[styles.typeBtnText, type === 'checkbox' && styles.typeBtnTextActive]}> Checkbox</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.typeBtn, type === 'numeral' && styles.typeBtnActive]}
           onPress={() => setType('numeral')}
         >
-          <Text style={[styles.typeBtnText, type === 'numeral' && styles.typeBtnTextActive]}>
-            🔢 Numeral
-          </Text>
+          <View style={styles.typeBtnContent}>
+            <MaterialCommunityIcons
+              name="numeric"
+              size={15}
+              color={type === 'numeral' ? '#818cf8' : '#9ca3af'}
+            />
+            <Text style={[styles.typeBtnText, type === 'numeral' && styles.typeBtnTextActive]}> Numeral</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.typeBtn, type === 'tiered' && styles.typeBtnActive]}
+          onPress={() => setType('tiered')}
+        >
+          <View style={styles.typeBtnContent}>
+            <MaterialCommunityIcons
+              name="stairs-up"
+              size={15}
+              color={type === 'tiered' ? '#818cf8' : '#9ca3af'}
+            />
+            <Text style={[styles.typeBtnText, type === 'tiered' && styles.typeBtnTextActive]}> Tiered</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
       <View style={styles.row}>
         <Text style={styles.label}>Good habit</Text>
         <Switch value={isGood} onValueChange={setIsGood} />
-        <Text style={[styles.badge, isGood ? styles.goodBadge : styles.badBadge]}>
-          {isGood ? '✅ Good' : '❌ Bad'}
-        </Text>
+        <View style={[styles.badge, isGood ? styles.goodBadge : styles.badBadge]}>
+          <MaterialCommunityIcons
+            name={isGood ? 'thumb-up' : 'thumb-down'}
+            size={12}
+            color={isGood ? '#4ade80' : '#f87171'}
+          />
+          <Text style={[styles.badgeText, isGood ? styles.goodBadgeText : styles.badBadgeText]}>
+            {isGood ? 'Good' : 'Bad'}
+          </Text>
+        </View>
       </View>
 
       {type === 'checkbox' && (
         <>
-          <Text style={styles.label}>Stars ⭐</Text>
+          <View style={styles.starsLabelRow}>
+            <Text style={styles.starsLabel}>Stars</Text>
+            <MaterialCommunityIcons name="star" size={14} color="#facc15" />
+          </View>
           <TextInput
             style={styles.input}
             value={stars}
@@ -115,6 +159,41 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
       )}
 
       {type === 'numeral' && (
+        <>
+          <Text style={styles.label}>Unit</Text>
+          <TextInput
+            style={styles.input}
+            value={unit}
+            onChangeText={setUnit}
+            placeholder="mins, sets, meals..."
+            placeholderTextColor="#555"
+          />
+
+          <Text style={styles.label}>Conversion rate</Text>
+          <View style={styles.tierRow}>
+            <TextInput
+              style={[styles.input, styles.tierInput]}
+              value={convPer}
+              onChangeText={setConvPer}
+              keyboardType="decimal-pad"
+              placeholder="1"
+              placeholderTextColor="#555"
+            />
+            <Text style={styles.text}> {unit} =</Text>
+            <TextInput
+              style={[styles.input, styles.tierInput]}
+              value={convStars}
+              onChangeText={setConvStars}
+              keyboardType="decimal-pad"
+              placeholder="1"
+              placeholderTextColor="#555"
+            />
+            <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+          </View>
+        </>
+      )}
+
+      {type === 'tiered' && (
         <>
           <Text style={styles.label}>Unit</Text>
           <TextInput
@@ -145,7 +224,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
                 placeholder="Stars"
                 placeholderTextColor="#555"
               />
-              <Text style={styles.text}>⭐</Text>
+              <MaterialCommunityIcons name="star" size={16} color="#facc15" />
             </View>
           ))}
 
@@ -172,7 +251,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
                 keyboardType="decimal-pad"
                 placeholderTextColor="#555"
               />
-              <Text style={styles.text}>⭐</Text>
+              <MaterialCommunityIcons name="star" size={16} color="#facc15" />
             </View>
           )}
         </>
@@ -204,6 +283,7 @@ const styles = StyleSheet.create({
     color: '#f0f0f0',
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 6 },
+  typeBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   typeBtn: {
     flex: 1,
     padding: 12,
@@ -215,9 +295,12 @@ const styles = StyleSheet.create({
   typeBtnActive: { borderColor: '#6366f1', backgroundColor: '#1e1b4b' },
   typeBtnText: { fontSize: 14, color: '#9ca3af' },
   typeBtnTextActive: { color: '#818cf8', fontWeight: '600' },
-  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, fontSize: 12 },
-  goodBadge: { backgroundColor: '#14532d', color: '#4ade80' },
-  badBadge: { backgroundColor: '#7f1d1d', color: '#f87171' },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  badgeText: { fontSize: 12 },
+  goodBadge: { backgroundColor: '#14532d' },
+  goodBadgeText: { color: '#4ade80' },
+  badBadge: { backgroundColor: '#7f1d1d' },
+  badBadgeText: { color: '#f87171' },
   tierRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 4 },
   tierInput: { flex: 1 },
   tierArrow: { fontSize: 18, color: '#9ca3af' },
@@ -238,4 +321,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelBtnText: { color: '#bbb', fontSize: 16 },
+  starsLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, marginBottom: 4 },
+  starsLabel: { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
 });
