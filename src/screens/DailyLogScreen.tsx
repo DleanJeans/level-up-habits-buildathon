@@ -1,0 +1,222 @@
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Habit, HabitLog } from '../models/types';
+import { getHabits, getLogsForDate, saveLog, formatDate } from '../store/storage';
+import { calculateStars } from '../store/starCalculator';
+
+export default function DailyLogScreen() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [logs, setLogs] = useState<Map<string, HabitLog>>(new Map());
+  const [totalStars, setTotalStars] = useState(0);
+
+  const dateStr = formatDate(currentDate);
+
+  const loadData = useCallback(async () => {
+    const [h, l] = await Promise.all([getHabits(), getLogsForDate(dateStr)]);
+    setHabits(h);
+    const logMap = new Map<string, HabitLog>();
+    l.forEach((log) => logMap.set(log.habitId, log));
+    setLogs(logMap);
+    setTotalStars(l.reduce((sum, log) => sum + log.starsEarned, 0));
+  }, [dateStr]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  async function toggleCheckbox(habit: Habit) {
+    const existing = logs.get(habit.id);
+    const newValue = existing ? !existing.value : true;
+    const starsEarned = newValue ? calculateStars(habit, true) : 0;
+
+    const log: HabitLog = {
+      habitId: habit.id,
+      date: dateStr,
+      value: newValue,
+      starsEarned,
+    };
+    await saveLog(log);
+    loadData();
+  }
+
+  async function updateNumeral(habit: Habit, delta: number) {
+    const existing = logs.get(habit.id);
+    const currentVal = existing ? (typeof existing.value === 'number' ? existing.value : 0) : 0;
+    const newVal = Math.max(0, currentVal + delta);
+    const starsEarned = calculateStars(habit, newVal);
+
+    const log: HabitLog = {
+      habitId: habit.id,
+      date: dateStr,
+      value: newVal,
+      starsEarned,
+    };
+    await saveLog(log);
+    loadData();
+  }
+
+  function changeDate(delta: number) {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + delta);
+    setCurrentDate(d);
+  }
+
+  function formatDisplayDate(d: Date): string {
+    const today = formatDate(new Date());
+    const ds = formatDate(d);
+    if (ds === today) return 'Today';
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (ds === formatDate(yesterday)) return 'Yesterday';
+    return ds;
+  }
+
+  function renderHabitItem({ item }: { item: Habit }) {
+    const log = logs.get(item.id);
+    const starsEarned = log?.starsEarned ?? 0;
+    const isBad = !item.isGood;
+
+    return (
+      <View style={[styles.habitRow, isBad && styles.badRow]}>
+        <View style={styles.habitInfo}>
+          <Text style={[styles.habitName, isBad && styles.badText]}>{item.name}</Text>
+          <Text style={[styles.starText, starsEarned < 0 && styles.negativeStars]}>
+            {starsEarned > 0 ? '+' : ''}
+            {starsEarned.toFixed(2).replace(/\.?0+$/, '')}⭐
+          </Text>
+        </View>
+
+        {item.type === 'checkbox' ? (
+          <TouchableOpacity
+            style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
+            onPress={() => toggleCheckbox(item)}
+          >
+            <Text style={styles.checkboxText}>{log?.value === true ? '✓' : ''}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.stepper}>
+            <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, -1)}>
+              <Text style={styles.stepBtnText}>−</Text>
+            </TouchableOpacity>
+            <Text style={styles.stepValue}>
+              {typeof log?.value === 'number' ? log.value : 0} {item.unit || ''}
+            </Text>
+            <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, 1)}>
+              <Text style={styles.stepBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Date navigation */}
+      <View style={styles.dateNav}>
+        <TouchableOpacity onPress={() => changeDate(-1)}>
+          <Text style={styles.dateArrow}>◀</Text>
+        </TouchableOpacity>
+        <Text style={styles.dateText}>{formatDisplayDate(currentDate)}</Text>
+        <TouchableOpacity onPress={() => changeDate(1)}>
+          <Text style={styles.dateArrow}>▶</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Daily star total */}
+      <View style={styles.totalBox}>
+        <Text style={styles.totalLabel}>Daily Stars</Text>
+        <Text style={styles.totalValue}>
+          {totalStars.toFixed(2).replace(/\.?0+$/, '')} ⭐
+        </Text>
+      </View>
+
+      {habits.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>No habits yet. Go to Habits tab to add some!</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={habits}
+          keyExtractor={(item) => item.id}
+          renderItem={renderHabitItem}
+          contentContainerStyle={styles.list}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  dateNav: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 16,
+    gap: 20,
+  },
+  dateArrow: { fontSize: 20, color: '#4f46e5', padding: 8 },
+  dateText: { fontSize: 18, fontWeight: '600' },
+  totalBox: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: '#fefce8',
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fde047',
+  },
+  totalLabel: { fontSize: 14, color: '#a16207', fontWeight: '500' },
+  totalValue: { fontSize: 32, fontWeight: 'bold', color: '#854d0e' },
+  list: { paddingHorizontal: 16, paddingBottom: 20 },
+  habitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    marginVertical: 4,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 10,
+  },
+  badRow: { backgroundColor: '#fef2f2' },
+  habitInfo: { flex: 1 },
+  habitName: { fontSize: 16, fontWeight: '500' },
+  badText: { color: '#dc2626' },
+  starText: { fontSize: 13, color: '#16a34a', marginTop: 2 },
+  negativeStars: { color: '#dc2626' },
+  checkbox: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
+  checkboxText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e0e7ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepBtnText: { fontSize: 20, color: '#4f46e5', fontWeight: 'bold' },
+  stepValue: { fontSize: 16, fontWeight: '500', minWidth: 50, textAlign: 'center' },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: '#aaa', fontSize: 16, textAlign: 'center', paddingHorizontal: 40 },
+});
