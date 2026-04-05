@@ -64,8 +64,8 @@ export default function DailyLogScreen() {
       getMoodLogsForDate(dateStr),
     ]);
     setAllHabits(h);
-    // Filter to daily habits only (non-daily habits don't show on daily view)
-    const dailyHabits = h.filter((habit) => (habit.frequency || 'daily') === 'daily');
+    // Filter to daily good habits only (bad habits and non-daily habits don't show on daily view)
+    const dailyHabits = h.filter((habit) => (habit.frequency || 'daily') === 'daily' && habit.isGood !== false);
     setHabits(dailyHabits);
     const logMap = new Map<string, HabitLog>();
     l.forEach((log) => logMap.set(log.habitId, log));
@@ -250,12 +250,16 @@ export default function DailyLogScreen() {
   function renderHabitItem({ item }: { item: Habit }) {
     const log = logs.get(item.id);
     const starsEarned = log?.starsEarned ?? 0;
-    const isBad = !item.isGood;
 
     return (
-      <View style={[styles.habitRow, isBad && styles.badRow]}>
+      <View style={styles.habitRow}>
         <View style={styles.habitInfo}>
-          <Text style={[styles.habitName, isBad && styles.badText]}>{item.name}</Text>
+          <Text style={styles.habitName}>{item.name}</Text>
+          {(item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log.loggedAt && (
+            <Text style={styles.completedTime}>
+              {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          )}
         </View>
         {starsEarned !== 0 && (
           <View style={styles.starRow}>
@@ -561,6 +565,7 @@ const styles = StyleSheet.create({
   badRow: { backgroundColor: '#2d0707' },
   habitInfo: { flex: 1, marginRight: 12 },
   habitName: { fontSize: 16, fontWeight: '500', color: '#f0f0f0' },
+  completedTime: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   badText: { color: '#f87171' },
   starRow: { flexDirection: 'row', alignItems: 'center', marginRight: 8 },
   starText: { fontSize: 13, color: '#4ade80' },

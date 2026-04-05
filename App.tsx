@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DailyLogScreen from './src/screens/DailyLogScreen';
 import HabitsScreen from './src/screens/HabitsScreen';
 import TimelineScreen from './src/screens/TimelineScreen';
@@ -21,6 +22,7 @@ const darkTheme = {
 
 export default function App() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <NavigationContainer theme={darkTheme}>
       <StatusBar style="light" />
       <Tab.Navigator
@@ -53,7 +55,7 @@ export default function App() {
         }}
       >
         <Tab.Screen
-          name="Today"
+          name="Daily"
           component={DailyLogScreen}
           options={{
             tabBarIcon: ({ color }) => (
@@ -91,5 +93,6 @@ export default function App() {
         />
       </Tab.Navigator>
     </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }
