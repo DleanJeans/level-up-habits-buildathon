@@ -6,6 +6,7 @@ import { Habit, HabitLog } from '../models/types';
 import { getHabits, getLogsForDate, saveLog, formatDate } from '../store/storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import WebContainer from '../components/WebContainer';
+import DateNav from '../components/DateNav';
 
 interface TimelineEntry {
   habit: Habit;
@@ -65,16 +66,6 @@ export default function TimelineScreen() {
     setCurrentDate(d);
   }
 
-  function formatDisplayDate(d: Date): string {
-    const today = formatDate(new Date());
-    const ds = formatDate(d);
-    if (ds === today) return 'Today';
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (ds === formatDate(yesterday)) return 'Yesterday';
-    return ds;
-  }
-
   function openEditTime(entry: TimelineEntry) {
     setEditingEntry(entry);
     setEditTimeStr(formatTime(entry.time));
@@ -113,17 +104,9 @@ export default function TimelineScreen() {
 
   return (
     <WebContainer>
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* Date navigation */}
-      <View style={styles.dateNav}>
-        <TouchableOpacity onPress={() => changeDate(-1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <MaterialCommunityIcons name="chevron-left" size={32} color="#818cf8" />
-        </TouchableOpacity>
-        <Text style={styles.dateText}>{formatDisplayDate(currentDate)}</Text>
-        <TouchableOpacity onPress={() => changeDate(1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <MaterialCommunityIcons name="chevron-right" size={32} color="#818cf8" />
-        </TouchableOpacity>
-      </View>
+      <DateNav currentDate={currentDate} onChangeDate={changeDate} />
 
       {/* Edit time modal */}
       <Modal visible={!!editingEntry} transparent animationType="fade" onRequestClose={() => setEditingEntry(null)}>
@@ -221,15 +204,6 @@ export default function TimelineScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
-  dateNav: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 8,
-    gap: 16,
-  },
-  dateText: { fontSize: 18, fontWeight: '600', color: '#f0f0f0' },
   scrollContent: { paddingHorizontal: 16 },
   segmentTitle: {
     fontSize: 14,

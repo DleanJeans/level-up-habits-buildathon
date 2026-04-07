@@ -34,6 +34,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { v4 as uuidv4 } from 'uuid';
 import WebContainer from '../components/WebContainer';
 import HabitForm from '../components/HabitForm';
+import DateNav from '../components/DateNav';
 
 export default function DailyLogScreen() {
   const insets = useSafeAreaInsets();
@@ -249,16 +250,6 @@ export default function DailyLogScreen() {
     setCurrentDate(d);
   }
 
-  function formatDisplayDate(d: Date): string {
-    const today = formatDate(new Date());
-    const ds = formatDate(d);
-    if (ds === today) return 'Today';
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (ds === formatDate(yesterday)) return 'Yesterday';
-    return ds;
-  }
-
   function renderHabitItem({ item }: { item: Habit }) {
     const log = logs.get(item.id);
     const starsEarned = log?.starsEarned ?? 0;
@@ -349,17 +340,9 @@ export default function DailyLogScreen() {
 
   return (
     <WebContainer>
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* Date navigation */}
-      <View style={styles.dateNav}>
-        <TouchableOpacity onPress={() => changeDate(-1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <MaterialCommunityIcons name="chevron-left" size={32} color="#818cf8" style={styles.dateArrow} />
-        </TouchableOpacity>
-        <Text style={styles.dateText}>{formatDisplayDate(currentDate)}</Text>
-        <TouchableOpacity onPress={() => changeDate(1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <MaterialCommunityIcons name="chevron-right" size={32} color="#818cf8" style={styles.dateArrow} />
-        </TouchableOpacity>
-      </View>
+      <DateNav currentDate={currentDate} onChangeDate={changeDate} />
 
       {/* Daily star total */}
       <View style={styles.totalBox}>
@@ -560,17 +543,7 @@ export default function DailyLogScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
-  dateNav: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 4,
-    gap: 16,
-  },
-  dateArrow: { padding: 10 },
   totalValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dateText: { fontSize: 18, fontWeight: '600', color: '#f0f0f0' },
   totalBox: {
     marginHorizontal: 16,
     marginTop: 8,
