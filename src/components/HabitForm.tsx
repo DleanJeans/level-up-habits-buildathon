@@ -22,6 +22,13 @@ interface Props {
   onCancel: () => void;
 }
 
+const HABIT_TYPES: { value: HabitType; label: string; icon: string }[] = [
+  { value: 'checkbox',   label: 'Checkbox', icon: 'checkbox-marked-outline' },
+  { value: 'numeral',    label: 'Numeral',  icon: 'numeric'                 },
+  { value: 'tiered',     label: 'Tiered',   icon: 'stairs-up'               },
+  { value: 'time-based', label: 'Time',     icon: 'clock-outline'           },
+];
+
 export default function HabitForm({ habit, onSave, onCancel }: Props) {
   const [name, setName] = useState(habit?.name || '');
   const [type, setType] = useState<HabitType>(habit?.type || 'checkbox');
@@ -202,59 +209,23 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Habit name" placeholderTextColor="#555" />
 
       <Text style={styles.label}>Type</Text>
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.typeBtn, type === 'checkbox' && styles.typeBtnActive]}
-          onPress={() => setType('checkbox')}
-        >
-          <View style={styles.typeBtnContent}>
-            <MaterialCommunityIcons
-              name="checkbox-marked-outline"
-              size={15}
-              color={type === 'checkbox' ? '#818cf8' : '#9ca3af'}
-            />
-            <Text style={[styles.typeBtnText, type === 'checkbox' && styles.typeBtnTextActive]}> Checkbox</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeBtn, type === 'numeral' && styles.typeBtnActive]}
-          onPress={() => setType('numeral')}
-        >
-          <View style={styles.typeBtnContent}>
-            <MaterialCommunityIcons
-              name="numeric"
-              size={15}
-              color={type === 'numeral' ? '#818cf8' : '#9ca3af'}
-            />
-            <Text style={[styles.typeBtnText, type === 'numeral' && styles.typeBtnTextActive]}> Numeral</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeBtn, type === 'tiered' && styles.typeBtnActive]}
-          onPress={() => setType('tiered')}
-        >
-          <View style={styles.typeBtnContent}>
-            <MaterialCommunityIcons
-              name="stairs-up"
-              size={15}
-              color={type === 'tiered' ? '#818cf8' : '#9ca3af'}
-            />
-            <Text style={[styles.typeBtnText, type === 'tiered' && styles.typeBtnTextActive]}> Tiered</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeBtn, type === 'time-based' && styles.typeBtnActive]}
-          onPress={() => setType('time-based')}
-        >
-          <View style={styles.typeBtnContent}>
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={15}
-              color={type === 'time-based' ? '#818cf8' : '#9ca3af'}
-            />
-            <Text style={[styles.typeBtnText, type === 'time-based' && styles.typeBtnTextActive]}> Time</Text>
-          </View>
-        </TouchableOpacity>
+      <View style={styles.typeGrid}>
+        {HABIT_TYPES.map(({ value, label, icon }) => (
+          <TouchableOpacity
+            key={value}
+            style={[styles.typeBtn, type === value && styles.typeBtnActive]}
+            onPress={() => setType(value)}
+          >
+            <View style={styles.typeBtnContent}>
+              <MaterialCommunityIcons
+                name={icon as any}
+                size={15}
+                color={type === value ? '#818cf8' : '#9ca3af'}
+              />
+              <Text style={[styles.typeBtnText, type === value && styles.typeBtnTextActive]}>{label}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <View style={styles.row}>
@@ -655,9 +626,10 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 6 },
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 },
   typeBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   typeBtn: {
-    flex: 1,
+    width: '48%',
     paddingVertical: 14,
     paddingHorizontal: 8,
     borderRadius: 10,
