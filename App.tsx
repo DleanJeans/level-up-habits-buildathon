@@ -57,12 +57,12 @@ export default function App() {
           },
           tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
           tabBarIconStyle: isLandscape ? {} : { marginBottom: -2 },
-          headerStyle: Platform.OS === 'web' ? {
+          headerStyle: {
             elevation: 0,
             shadowOpacity: 0,
             borderBottomWidth: 1,
             borderBottomColor: '#2a2a2a',
-          } : undefined,
+          },
           headerTitleAlign: 'center',
         }}
       >
