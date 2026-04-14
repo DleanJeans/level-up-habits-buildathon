@@ -35,6 +35,7 @@ import { v4 as uuidv4 } from 'uuid';
 import WebContainer from '../components/WebContainer';
 import HabitForm from '../components/HabitForm';
 import DateNav from '../components/DateNav';
+import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
 
 export default function DailyLogScreen() {
   const insets = useSafeAreaInsets();
@@ -59,6 +60,8 @@ export default function DailyLogScreen() {
   // Habit form
   const [showForm, setShowForm] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  // Edit log time
+  const [editingLog, setEditingLog] = useState<{ habit: Habit; log: HabitLog } | null>(null);
 
   const dateStr = formatDate(currentDate);
 
@@ -244,6 +247,18 @@ export default function DailyLogScreen() {
     loadData();
   }
 
+  async function handleSaveLogTime(hours: number, minutes: number) {
+    if (!editingLog) return;
+    const base = editingLog.log.loggedAt
+      ? new Date(editingLog.log.loggedAt)
+      : new Date(dateStr + 'T12:00:00');
+    base.setHours(hours, minutes, 0, 0);
+    const updatedLog: HabitLog = { ...editingLog.log, loggedAt: base.toISOString() };
+    await saveLog(updatedLog);
+    setEditingLog(null);
+    loadData();
+  }
+
   function changeDate(delta: number) {
     const d = new Date(currentDate);
     d.setDate(d.getDate() + delta);
@@ -259,9 +274,17 @@ export default function DailyLogScreen() {
         <View style={styles.habitInfo}>
           <Text style={styles.habitName}>{item.name}</Text>
           {(item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log.loggedAt && (
-            <Text style={styles.completedTime}>
-              {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
+            <TouchableOpacity
+              onPress={() => setEditingLog({ habit: item, log: log! })}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <View style={styles.completedTimeRow}>
+                <Text style={styles.completedTime}>
+                  {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <MaterialCommunityIcons name="pencil-outline" size={11} color="#4b5563" />
+              </View>
+            </TouchableOpacity>
           )}
         </View>
         {starsEarned !== 0 && (
@@ -341,6 +364,14 @@ export default function DailyLogScreen() {
   return (
     <WebContainer>
     <View style={styles.container}>
+      <EditTimeModal
+        visible={!!editingLog}
+        habitName={editingLog?.habit.name ?? ''}
+        initialTime={editingLog?.log.loggedAt ? toHHMM(new Date(editingLog.log.loggedAt)) : ''}
+        onSave={handleSaveLogTime}
+        onCancel={() => setEditingLog(null)}
+      />
+
       {/* Date navigation */}
       <DateNav currentDate={currentDate} onChangeDate={changeDate} />
 
@@ -571,6 +602,7 @@ const styles = StyleSheet.create({
   badRow: { backgroundColor: '#2d0707' },
   habitInfo: { flex: 1, marginRight: 12 },
   habitName: { fontSize: 16, fontWeight: '500', color: '#f0f0f0' },
+  completedTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   completedTime: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   badText: { color: '#f87171' },
   starRow: { flexDirection: 'row', alignItems: 'center', marginRight: 8 },
