@@ -9,6 +9,7 @@ import DailyLogScreen from './src/screens/DailyScreen';
 import HabitsScreen from './src/screens/HabitsScreen';
 import TimelineScreen from './src/screens/TimelineScreen';
 import StatsScreen from './src/screens/StatsScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -121,6 +122,15 @@ export default function App() {
           options={{
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="lightning-bolt" size={22} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <MaterialCommunityIcons name="cog-outline" size={22} color={color} />
             ),
           }}
         />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getTimeFormat, TimeFormat } from '../store/storage';
 
 interface Props {
   visible: boolean;
@@ -16,6 +17,14 @@ export function toHHMM(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** Format a Date according to the time format preference. */
+export function formatTime(d: Date, format: TimeFormat): string {
+  if (format === '12') {
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+  return toHHMM(d);
+}
+
 function parseHHMM(hhmm: string): Date {
   const [h, m] = (hhmm || '12:00').split(':').map(Number);
   const d = new Date();
@@ -26,13 +35,20 @@ function parseHHMM(hhmm: string): Date {
 export default function EditTimeModal({ visible, habitName, initialTime, onSave, onCancel }: Props) {
   const [date, setDate] = useState(() => parseHHMM(initialTime));
   const [showAndroidPicker, setShowAndroidPicker] = useState(false);
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>('24');
 
   useEffect(() => {
     if (visible) {
       setDate(parseHHMM(initialTime));
       setShowAndroidPicker(false);
+      loadTimeFormat();
     }
   }, [visible, initialTime]);
+
+  async function loadTimeFormat() {
+    const format = await getTimeFormat();
+    setTimeFormat(format);
+  }
 
   function handleChange(_event: DateTimePickerEvent, selected?: Date) {
     if (Platform.OS === 'android') {
@@ -68,7 +84,7 @@ export default function EditTimeModal({ visible, habitName, initialTime, onSave,
               <Text style={styles.editModalHabit}>{habitName}</Text>
               <TouchableOpacity style={styles.androidTimeDisplay} onPress={() => setShowAndroidPicker(true)}>
                 <Text style={styles.androidTimeText}>
-                  {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatTime(date, timeFormat)}
                 </Text>
                 <MaterialCommunityIcons name="clock-edit-outline" size={20} color="#818cf8" />
               </TouchableOpacity>
@@ -77,7 +93,7 @@ export default function EditTimeModal({ visible, habitName, initialTime, onSave,
           </View>
         </Modal>
         {showAndroidPicker && (
-          <DateTimePicker value={date} mode="time" onChange={handleChange} />
+          <DateTimePicker value={date} mode="time" is24Hour={timeFormat === '24'} onChange={handleChange} />
         )}
       </>
     );
@@ -134,6 +150,7 @@ export default function EditTimeModal({ visible, habitName, initialTime, onSave,
             value={date}
             mode="time"
             display="spinner"
+            is24Hour={timeFormat === '24'}
             onChange={handleChange}
             style={styles.iosPicker}
             textColor="#f0f0f0"

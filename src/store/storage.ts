@@ -5,6 +5,13 @@ const HABITS_KEY = 'habits';
 const LOGS_PREFIX = 'logs_';
 const TASKS_PREFIX = 'tasks_';
 const MOOD_LOGS_PREFIX = 'mood_logs_';
+const SETTINGS_KEY = 'settings';
+
+export type TimeFormat = '12' | '24';
+
+export interface Settings {
+  timeFormat: TimeFormat;
+}
 
 // --- Habits ---
 
@@ -170,4 +177,30 @@ export function formatDate(d: Date): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// --- Settings ---
+
+const defaultSettings: Settings = {
+  timeFormat: '24',
+};
+
+export async function getSettings(): Promise<Settings> {
+  const json = await AsyncStorage.getItem(SETTINGS_KEY);
+  return json ? { ...defaultSettings, ...JSON.parse(json) } : defaultSettings;
+}
+
+export async function saveSettings(settings: Settings): Promise<void> {
+  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+export async function getTimeFormat(): Promise<TimeFormat> {
+  const settings = await getSettings();
+  return settings.timeFormat;
+}
+
+export async function setTimeFormat(format: TimeFormat): Promise<void> {
+  const settings = await getSettings();
+  settings.timeFormat = format;
+  await saveSettings(settings);
 }
