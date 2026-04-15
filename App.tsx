@@ -1,5 +1,5 @@
-import React from 'react';
-import { Platform, useWindowDimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Platform, useWindowDimensions, Keyboard } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -23,6 +23,27 @@ const darkTheme = {
 export default function App() {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -42,7 +63,7 @@ export default function App() {
             borderRightWidth: 1,
             borderRightColor: '#2a2a2a',
             borderTopWidth: 0,
-          } : {
+          } : (keyboardVisible ? { display: 'none' } : {
             paddingTop: 0,
             paddingBottom: 8,
             height: 72,
@@ -54,7 +75,7 @@ export default function App() {
               borderTopLeftRadius: 0,
               borderTopRightRadius: 0,
             } : {}),
-          },
+          }),
           tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
           tabBarIconStyle: isLandscape ? {} : { marginBottom: -2 },
           headerStyle: {
