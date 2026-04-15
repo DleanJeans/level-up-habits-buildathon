@@ -1,4 +1,4 @@
-name: EAS APK Build
+name: EAS Android Preview Build for PRs
 
 on:
   pull_request:
@@ -9,6 +9,8 @@ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -24,7 +26,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build APK
         run: eas build --platform android --profile preview --non-interactive
