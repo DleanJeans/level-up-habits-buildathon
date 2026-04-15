@@ -10,6 +10,7 @@ import {
   SectionList,
   Animated,
   Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -367,7 +368,11 @@ export default function DailyLogScreen() {
 
   return (
     <WebContainer>
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
       <EditTimeModal
         visible={!!editingLog}
         habitName={editingLog?.habit.name ?? ''}
@@ -498,8 +503,9 @@ export default function DailyLogScreen() {
           data={habits}
           keyExtractor={(item) => item.id}
           renderItem={renderHabitItem}
-          contentContainerStyle={[styles.list, { paddingBottom: 24 + insets.bottom }]}
+          contentContainerStyle={[styles.list, { paddingBottom: 120 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           ListFooterComponent={
             <View style={styles.tasksSection}>
               <Text style={styles.sectionTitle}>Tasks</Text>
@@ -571,7 +577,7 @@ export default function DailyLogScreen() {
           }}
         />
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
     </WebContainer>
   );
 }
@@ -765,6 +771,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
+    zIndex: 10,
   },
   // Mood logs
   moodLogsSection: {
