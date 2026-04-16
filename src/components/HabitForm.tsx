@@ -275,7 +275,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
         </TouchableOpacity>
       </View>
 
-      {type === 'checkbox' && (
+      {type === 'checkbox' && category !== 'neutral' && (
         <>
           <View style={styles.starsLabelRow}>
             <Text style={styles.starsLabel}>Stars</Text>
@@ -303,34 +303,38 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
             placeholderTextColor="#555"
           />
 
-          <Text style={styles.label}>Conversion rate</Text>
-          <View style={styles.tierRow}>
-            <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
-              <TextInput
-                style={styles.innerInput}
-                value={convPer}
-                onChangeText={setConvPer}
-                keyboardType="decimal-pad"
-                placeholder="1"
-                placeholderTextColor="#555"
-              />
-              <Text style={styles.inputSuffix} numberOfLines={1}>{unit}</Text>
-            </View>
+          {category !== 'neutral' && (
+            <>
+              <Text style={styles.label}>Conversion rate</Text>
+              <View style={styles.tierRow}>
+                <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
+                  <TextInput
+                    style={styles.innerInput}
+                    value={convPer}
+                    onChangeText={setConvPer}
+                    keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor="#555"
+                  />
+                  <Text style={styles.inputSuffix} numberOfLines={1}>{unit}</Text>
+                </View>
 
-            <Text style={styles.tierArrow}>→</Text>
-            
-            <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
-              <TextInput
-                style={styles.innerInput}
-                value={convStars}
-                onChangeText={setConvStars}
-                keyboardType="decimal-pad"
-                placeholder="1"
-                placeholderTextColor="#555"
-              />
-              <MaterialCommunityIcons name="star" size={16} color="#facc15" style={{ paddingRight: 10 }} />
-            </View>
-          </View>
+                <Text style={styles.tierArrow}>→</Text>
+
+                <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
+                  <TextInput
+                    style={styles.innerInput}
+                    value={convStars}
+                    onChangeText={setConvStars}
+                    keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor="#555"
+                  />
+                  <MaterialCommunityIcons name="star" size={16} color="#facc15" style={{ paddingRight: 10 }} />
+                </View>
+              </View>
+            </>
+          )}
         </>
       )}
 
@@ -345,60 +349,64 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
             placeholderTextColor="#555"
           />
 
-          <Text style={styles.label}>Tiers (value → stars)</Text>
-          {tiers.map((tier, i) => (
-            <View key={i} style={styles.tierRow}>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={String(tier.value)}
-                onChangeText={(v) => updateTier(i, 'value', v)}
-                keyboardType="decimal-pad"
-                placeholder="Value"
-                placeholderTextColor="#555"
-              />
-              <Text style={styles.tierArrow}>→</Text>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={String(tier.stars)}
-                onChangeText={(v) => updateTier(i, 'stars', v)}
-                keyboardType="decimal-pad"
-                placeholder="Stars"
-                placeholderTextColor="#555"
-              />
-              <MaterialCommunityIcons name="star" size={16} color="#facc15" />
-            </View>
-          ))}
+          {category !== 'neutral' && (
+            <>
+              <Text style={styles.label}>Tiers (value → stars)</Text>
+              {tiers.map((tier, i) => (
+                <View key={i} style={styles.tierRow}>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={String(tier.value)}
+                    onChangeText={(v) => updateTier(i, 'value', v)}
+                    keyboardType="decimal-pad"
+                    placeholder="Value"
+                    placeholderTextColor="#555"
+                  />
+                  <Text style={styles.tierArrow}>→</Text>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={String(tier.stars)}
+                    onChangeText={(v) => updateTier(i, 'stars', v)}
+                    keyboardType="decimal-pad"
+                    placeholder="Stars"
+                    placeholderTextColor="#555"
+                  />
+                  <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+                </View>
+              ))}
 
-          <View style={styles.row}>
-            <Text style={styles.label}>Extra stars rule</Text>
-            <Switch value={hasExtra} onValueChange={setHasExtra} />
-          </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Extra stars rule</Text>
+                <Switch value={hasExtra} onValueChange={setHasExtra} />
+              </View>
 
-          {hasExtra && (
-            <View style={styles.tierRow}>
-              <Text style={styles.text}>Every </Text>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={extraPer}
-                onChangeText={setExtraPer}
-                keyboardType="decimal-pad"
-                placeholderTextColor="#555"
-              />
-              <Text style={styles.text}> {unit} →</Text>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={extraStars}
-                onChangeText={setExtraStars}
-                keyboardType="decimal-pad"
-                placeholderTextColor="#555"
-              />
-              <MaterialCommunityIcons name="star" size={16} color="#facc15" />
-            </View>
+              {hasExtra && (
+                <View style={styles.tierRow}>
+                  <Text style={styles.text}>Every </Text>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={extraPer}
+                    onChangeText={setExtraPer}
+                    keyboardType="decimal-pad"
+                    placeholderTextColor="#555"
+                  />
+                  <Text style={styles.text}> {unit} →</Text>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={extraStars}
+                    onChangeText={setExtraStars}
+                    keyboardType="decimal-pad"
+                    placeholderTextColor="#555"
+                  />
+                  <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+                </View>
+              )}
+            </>
           )}
         </>
       )}
 
-      {type === 'time-based' && (
+      {type === 'time-based' && category !== 'neutral' && (
         <>
           <View style={styles.starsLabelRow}>
             <Text style={styles.starsLabel}>Fallback Stars</Text>
@@ -459,7 +467,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
         </>
       )}
 
-      {(type === 'numeral' || type === 'tiered') && (
+      {(type === 'numeral' || type === 'tiered') && category !== 'neutral' && (
         <>
           <View style={styles.row}>
             <Text style={styles.label}>Starting stars</Text>
