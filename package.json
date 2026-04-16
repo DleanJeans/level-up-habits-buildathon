@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
-    "build:android": "source ~/.zshrc && eas build --platform android --profile preview"
+    "build:android": "source ~/.zshrc && eas build --platform android --profile preview --local",
+    "build:android:online": "source ~/.zshrc && eas build --platform android --profile preview"
   },
   "dependencies": {
     "@babel/traverse--for-generate-function-map": "npm:@babel/traverse@^7.29.0",
