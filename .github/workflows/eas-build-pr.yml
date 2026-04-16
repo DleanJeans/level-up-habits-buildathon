@@ -37,21 +37,28 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Send OTA Update
+        id: ota-update
         run: |
-          eas update --branch preview --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+          OUTPUT=$(eas update --branch preview --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" --json)
+          echo "output=$OUTPUT" >> $GITHUB_OUTPUT
+          UPDATE_ID=$(echo "$OUTPUT" | jq -r '.[] | select(.platform != null) | .id' | head -n 1)
+          echo "update-id=$UPDATE_ID" >> $GITHUB_OUTPUT
 
       - name: Comment PR with EAS Dashboard Link
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
+            const updateId = '${{ steps.ota-update.outputs.update-id }}';
             const projectId = 'c8c12214-78b8-46a7-a027-2c79327d4cb2';
-            const dashboardUrl = `https://expo.dev/accounts/dleanjeans/projects/level-up-habits/updates`;
+            const dashboardUrl = updateId
+              ? `https://expo.dev/accounts/dleanjeans/projects/level-up-habits/updates/${updateId}`
+              : `https://expo.dev/accounts/dleanjeans/projects/level-up-habits/updates`;
             const comment = `### 🚀 OTA Update Sent
 
             Preview update has been sent to the \`preview\` channel!
 
-            **[View on EAS Dashboard](${dashboardUrl})**`;
+            **[View Update on EAS Dashboard](${dashboardUrl})**`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -65,6 +72,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      apk-name: ${{ steps.build.outputs.apk-name }}
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       npm_config_user_agent: pnpm
@@ -95,14 +104,18 @@ jobs:
       - name: Build APK
         id: build
         run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          APK_NAME="level-up-habits-${TIMESTAMP}.apk"
           eas build --platform android --profile preview --local --non-interactive --output ./build-output.apk
-          echo "apk-path=./build-output.apk" >> $GITHUB_OUTPUT
+          mv ./build-output.apk "./${APK_NAME}"
+          echo "apk-path=./${APK_NAME}" >> $GITHUB_OUTPUT
+          echo "apk-name=${APK_NAME}" >> $GITHUB_OUTPUT
 
       - name: Upload APK artifact (temporary)
         uses: actions/upload-artifact@v7
         with:
           name: android-preview-apk-temp
-          path: ./build-output.apk
+          path: ${{ steps.build.outputs.apk-path }}
           retention-days: 1
           archive: false
           if-no-files-found: error
@@ -127,8 +140,8 @@ jobs:
         uses: actions/upload-artifact@v7
         id: upload-artifact
         with:
-          name: android-preview-apk.apk
-          path: ./build-output.apk
+          name: ${{ needs.build-apk.outputs.apk-name }}
+          path: ./${{ needs.build-apk.outputs.apk-name }}
           retention-days: 30
           archive: false
           if-no-files-found: error

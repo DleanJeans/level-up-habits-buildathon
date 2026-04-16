@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Platform, useWindowDimensions, Keyboard } from 'react-native';
+import { Platform, useWindowDimensions, Keyboard, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Updates from 'expo-updates';
 import DailyLogScreen from './src/screens/DailyScreen';
 import HabitsScreen from './src/screens/HabitsScreen';
 import TimelineScreen from './src/screens/TimelineScreen';
@@ -39,6 +40,38 @@ export default function App() {
         setKeyboardVisible(false);
       }
     );
+
+    // Check for OTA updates on app start (only in production builds)
+    async function checkForUpdates() {
+      if (!__DEV__) {
+        try {
+          const update = await Updates.checkForUpdateAsync();
+          if (update.isAvailable) {
+            await Updates.fetchUpdateAsync();
+            Alert.alert(
+              'Update Available',
+              'A new update has been downloaded. Restart the app to apply it.',
+              [
+                {
+                  text: 'Restart Now',
+                  onPress: async () => {
+                    await Updates.reloadAsync();
+                  },
+                },
+                {
+                  text: 'Later',
+                  style: 'cancel',
+                },
+              ]
+            );
+          }
+        } catch (error) {
+          console.error('Error checking for updates:', error);
+        }
+      }
+    }
+
+    checkForUpdates();
 
     return () => {
       keyboardDidShowListener.remove();
