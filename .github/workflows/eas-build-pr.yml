@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       npm_config_user_agent: pnpm
@@ -39,12 +40,31 @@ jobs:
         run: |
           eas update --branch preview --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
 
-  local-build:
-    name: Build and Upload APK
+      - name: Comment PR with EAS Dashboard Link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const projectId = 'c8c12214-78b8-46a7-a027-2c79327d4cb2';
+            const dashboardUrl = `https://expo.dev/accounts/dleanjeans/projects/level-up-habits/updates`;
+            const comment = `### 🚀 OTA Update Sent
+
+            Preview update has been sent to the \`preview\` channel!
+
+            **[View on EAS Dashboard](${dashboardUrl})**`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  build-apk:
+    name: Build APK
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       npm_config_user_agent: pnpm
@@ -78,14 +98,39 @@ jobs:
           eas build --platform android --profile preview --local --non-interactive --output ./build-output.apk
           echo "apk-path=./build-output.apk" >> $GITHUB_OUTPUT
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Upload APK artifact (temporary)
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-preview-apk-temp
+          path: ./build-output.apk
+          retention-days: 1
+          archive: false
+          if-no-files-found: error
+
+  upload-apk:
+    name: Upload APK
+    runs-on: ubuntu-latest
+    needs: build-apk
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Download APK from build job
+        uses: actions/download-artifact@v8
+        with:
+          name: android-preview-apk-temp
+          path: ./
+
+      - name: Upload APK artifact (final)
+        uses: actions/upload-artifact@v7
         id: upload-artifact
         with:
           name: android-preview-apk.apk
-          path: ${{ steps.build.outputs.apk-path }}
+          path: ./build-output.apk
           retention-days: 30
-          compression-level: 0
+          archive: false
           if-no-files-found: error
 
       - name: Comment PR with artifact URL
