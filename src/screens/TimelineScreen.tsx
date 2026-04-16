@@ -8,6 +8,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import WebContainer from '../components/WebContainer';
 import DateNav from '../components/DateNav';
 import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const HIDE_AUTO_HABITS_KEY = 'timeline_hide_auto_habits';
 
 interface TimelineEntry {
   habit: Habit;
@@ -32,12 +35,22 @@ export default function TimelineScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [totalStars, setTotalStars] = useState(0);
   const [editingEntry, setEditingEntry] = useState<TimelineEntry | null>(null);
+  const [hideAutoHabits, setHideAutoHabits] = useState(false);
 
   const dateStr = formatDate(currentDate);
 
   const loadData = useCallback(async () => {
-    const [habits, logs] = await Promise.all([getHabits(), getLogsForDate(dateStr)]);
+    const [habits, logs, savedHideAutoHabits] = await Promise.all([
+      getHabits(),
+      getLogsForDate(dateStr),
+      AsyncStorage.getItem(HIDE_AUTO_HABITS_KEY),
+    ]);
     const habitMap = new Map(habits.map((h) => [h.id, h]));
+
+    // Set hide auto-habits preference
+    if (savedHideAutoHabits !== null) {
+      setHideAutoHabits(savedHideAutoHabits === 'true');
+    }
 
     const timeline: TimelineEntry[] = [];
     for (const log of logs) {
@@ -80,9 +93,20 @@ export default function TimelineScreen() {
     loadData();
   }
 
+  async function toggleHideAutoHabits() {
+    const newValue = !hideAutoHabits;
+    setHideAutoHabits(newValue);
+    await AsyncStorage.setItem(HIDE_AUTO_HABITS_KEY, String(newValue));
+  }
+
+  // Filter entries based on hideAutoHabits setting
+  const filteredEntries = hideAutoHabits
+    ? entries.filter((e) => !e.habit.isAutoHabit)
+    : entries;
+
   // Group entries by time segment
   const grouped = new Map<string, TimelineEntry[]>();
-  for (const entry of entries) {
+  for (const entry of filteredEntries) {
     const seg = getSegment(entry.time.getHours());
     if (!grouped.has(seg)) grouped.set(seg, []);
     grouped.get(seg)!.push(entry);
@@ -95,6 +119,22 @@ export default function TimelineScreen() {
     <View style={styles.container}>
       {/* Date navigation */}
       <DateNav currentDate={currentDate} onChangeDate={changeDate} />
+
+      {/* Toggle for hiding auto-habits */}
+      <TouchableOpacity
+        style={styles.toggleRow}
+        onPress={toggleHideAutoHabits}
+        activeOpacity={0.7}
+      >
+        <MaterialCommunityIcons
+          name={hideAutoHabits ? 'eye-off' : 'eye'}
+          size={18}
+          color="#818cf8"
+        />
+        <Text style={styles.toggleText}>
+          {hideAutoHabits ? 'Show' : 'Hide'} Auto-Habits
+        </Text>
+      </TouchableOpacity>
 
       <EditTimeModal
         visible={!!editingEntry}
@@ -126,12 +166,18 @@ export default function TimelineScreen() {
                       {i < grouped.get(seg)!.length - 1 && <View style={styles.line} />}
                     </View>
                     <View style={styles.entryContent}>
-                      <TouchableOpacity onPress={() => openEditTime(entry)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                      {!entry.habit.isAutoHabit ? (
+                        <TouchableOpacity onPress={() => openEditTime(entry)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                          <View style={styles.entryTimeRow}>
+                            <Text style={styles.entryTime}>{formatTime(entry.time)}</Text>
+                            <MaterialCommunityIcons name="pencil-outline" size={11} color="#4b5563" style={styles.editIcon} />
+                          </View>
+                        </TouchableOpacity>
+                      ) : (
                         <View style={styles.entryTimeRow}>
                           <Text style={styles.entryTime}>{formatTime(entry.time)}</Text>
-                          <MaterialCommunityIcons name="pencil-outline" size={11} color="#4b5563" style={styles.editIcon} />
                         </View>
-                      </TouchableOpacity>
+                      )}
                       <Text
                         style={[
                           styles.entryName,
@@ -172,6 +218,20 @@ export default function TimelineScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
   scrollContent: { paddingHorizontal: 16 },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#1e1b4b',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  toggleText: { fontSize: 13, color: '#c4b5fd', fontWeight: '500' },
   segmentTitle: {
     fontSize: 14,
     fontWeight: '700',

@@ -71,6 +71,10 @@ export interface Habit {
   cues?: Cue[];
   /** Reminders linked to other habits */
   reminders?: Reminder[];
+  /** Auto-habits are automatically tracked (e.g., app check-in) */
+  isAutoHabit?: boolean;
+  /** Cooldown period in minutes for auto-habits */
+  cooldownMinutes?: number;
 }
 
 export interface HabitLog {

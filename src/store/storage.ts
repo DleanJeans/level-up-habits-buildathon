@@ -204,3 +204,67 @@ export async function setTimeFormat(format: TimeFormat): Promise<void> {
   settings.timeFormat = format;
   await saveSettings(settings);
 }
+
+// --- Auto-Habits ---
+
+const APP_CHECK_IN_ID = 'auto-habit-app-check-in';
+
+export async function ensureAutoHabits(): Promise<void> {
+  const habits = await getHabits();
+  const hasAppCheckIn = habits.some((h) => h.id === APP_CHECK_IN_ID);
+
+  if (!hasAppCheckIn) {
+    const appCheckInHabit: Habit = {
+      id: APP_CHECK_IN_ID,
+      name: 'App Check-in',
+      type: 'numeral',
+      isGood: true,
+      stars: 1,
+      unit: 'check-ins',
+      conversion: { per: 1, stars: 1 }, // 1 check-in = 1 star
+      isAutoHabit: true,
+      cooldownMinutes: 15,
+      frequency: 'daily',
+    };
+    await saveHabit(appCheckInHabit);
+  }
+}
+
+export function getAppCheckInHabitId(): string {
+  return APP_CHECK_IN_ID;
+}
+
+export async function canLogAppCheckIn(date: string): Promise<boolean> {
+  const logs = await getLogsForDate(date);
+  const checkInLog = logs.find((l) => l.habitId === APP_CHECK_IN_ID);
+
+  if (!checkInLog || !checkInLog.loggedAt) {
+    return true;
+  }
+
+  const lastLogTime = new Date(checkInLog.loggedAt).getTime();
+  const now = Date.now();
+  const cooldownMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+  return now - lastLogTime >= cooldownMs;
+}
+
+export async function getAppCheckInCooldownRemaining(date: string): Promise<number> {
+  const logs = await getLogsForDate(date);
+  const checkInLog = logs.find((l) => l.habitId === APP_CHECK_IN_ID);
+
+  if (!checkInLog || !checkInLog.loggedAt) {
+    return 0;
+  }
+
+  const lastLogTime = new Date(checkInLog.loggedAt).getTime();
+  const now = Date.now();
+  const cooldownMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+  const elapsed = now - lastLogTime;
+
+  if (elapsed >= cooldownMs) {
+    return 0;
+  }
+
+  return Math.ceil((cooldownMs - elapsed) / 1000); // Return seconds remaining
+}
