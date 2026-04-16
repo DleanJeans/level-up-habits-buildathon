@@ -29,6 +29,10 @@ import {
   getMoodLogsForDate,
   deleteMoodLog,
   saveHabit,
+  ensureAutoHabits,
+  getAppCheckInHabitId,
+  canLogAppCheckIn,
+  getAppCheckInCooldownRemaining,
 } from '../store/storage';
 import { calculateStars } from '../store/starCalculator';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -63,10 +67,15 @@ export default function DailyLogScreen() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   // Edit log time
   const [editingLog, setEditingLog] = useState<{ habit: Habit; log: HabitLog } | null>(null);
+  // App check-in cooldown
+  const [appCheckInCooldown, setAppCheckInCooldown] = useState(0);
 
   const dateStr = formatDate(currentDate);
 
   const loadData = useCallback(async () => {
+    // Ensure auto-habits exist
+    await ensureAutoHabits();
+
     const [h, l, t, ml] = await Promise.all([
       getHabits(),
       getLogsForDate(dateStr),
@@ -76,6 +85,12 @@ export default function DailyLogScreen() {
     setAllHabits(h);
     // Filter to daily good habits only (bad habits and non-daily habits don't show on daily view)
     const dailyHabits = h.filter((habit) => (habit.frequency || 'daily') === 'daily' && habit.isGood !== false);
+    // Sort habits: auto-habits first, then others
+    dailyHabits.sort((a, b) => {
+      if (a.isAutoHabit && !b.isAutoHabit) return -1;
+      if (!a.isAutoHabit && b.isAutoHabit) return 1;
+      return 0;
+    });
     setHabits(dailyHabits);
     const logMap = new Map<string, HabitLog>();
     l.forEach((log) => logMap.set(log.habitId, log));
@@ -85,13 +100,62 @@ export default function DailyLogScreen() {
     const logStars = l.reduce((sum, log) => sum + log.starsEarned, 0);
     const taskStars = t.filter((task) => task.completed).reduce((sum, task) => sum + task.stars, 0);
     setTotalStars(logStars + taskStars);
+
+    // Update app check-in cooldown
+    const cooldown = await getAppCheckInCooldownRemaining(dateStr);
+    setAppCheckInCooldown(cooldown);
   }, [dateStr]);
+
+  // Auto-log app check-in on screen focus (if cooldown has passed)
+  const autoLogAppCheckIn = useCallback(async () => {
+    const today = formatDate(new Date());
+    if (dateStr !== today) return; // Only auto-log for today
+
+    const canLog = await canLogAppCheckIn(dateStr);
+    if (!canLog) return;
+
+    const appCheckInId = getAppCheckInHabitId();
+    const habits = await getHabits();
+    const appCheckInHabit = habits.find((h) => h.id === appCheckInId);
+    if (!appCheckInHabit) return;
+
+    const logs = await getLogsForDate(dateStr);
+    const existingLog = logs.find((l) => l.habitId === appCheckInId);
+    const currentValue = typeof existingLog?.value === 'number' ? existingLog.value : 0;
+    const newValue = currentValue + 1;
+
+    const starsEarned = calculateStars(appCheckInHabit, newValue);
+    const log: HabitLog = {
+      habitId: appCheckInId,
+      date: dateStr,
+      value: newValue,
+      starsEarned,
+      loggedAt: new Date().toISOString(),
+    };
+    await saveLog(log);
+    loadData();
+  }, [dateStr, loadData]);
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      loadData().then(() => autoLogAppCheckIn());
+    }, [loadData, autoLogAppCheckIn])
   );
+
+  // Update cooldown timer every second
+  useEffect(() => {
+    if (appCheckInCooldown <= 0) return;
+
+    const interval = setInterval(async () => {
+      const cooldown = await getAppCheckInCooldownRemaining(dateStr);
+      setAppCheckInCooldown(cooldown);
+      if (cooldown === 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [appCheckInCooldown, dateStr]);
 
   async function toggleCheckbox(habit: Habit) {
     const existing = logs.get(habit.id);
@@ -274,11 +338,28 @@ export default function DailyLogScreen() {
   function renderHabitItem({ item }: { item: Habit }) {
     const log = logs.get(item.id);
     const starsEarned = log?.starsEarned ?? 0;
+    const isAppCheckIn = item.isAutoHabit && item.id === getAppCheckInHabitId();
+
+    // Format cooldown timer
+    const formatCooldown = (seconds: number): string => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     return (
-      <TouchableOpacity style={styles.habitRow} onPress={() => handleEditHabit(item)}>
+      <TouchableOpacity
+        style={styles.habitRow}
+        onPress={() => !isAppCheckIn && handleEditHabit(item)}
+        disabled={isAppCheckIn}
+      >
         <View style={styles.habitInfo}>
           <Text style={styles.habitName}>{item.name}</Text>
+          {isAppCheckIn && appCheckInCooldown > 0 && (
+            <Text style={styles.cooldownText}>
+              Next reward in: {formatCooldown(appCheckInCooldown)}
+            </Text>
+          )}
         </View>
         {(starsEarned !== 0 || ((item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt)) && (
           <View style={styles.starCol}>
@@ -291,7 +372,7 @@ export default function DailyLogScreen() {
                 <MaterialCommunityIcons name="star" size={13} color="#facc15" />
               </View>
             )}
-            {(item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt && (
+            {(item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt && !isAppCheckIn && (
               <TouchableOpacity
                 onPress={() => setEditingLog({ habit: item, log: log! })}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -307,14 +388,14 @@ export default function DailyLogScreen() {
           </View>
         )}
 
-        {item.type === 'checkbox' ? (
+        {!isAppCheckIn && item.type === 'checkbox' ? (
           <TouchableOpacity
             style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
             onPress={() => toggleCheckbox(item)}
           >
             {log?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
           </TouchableOpacity>
-        ) : item.type === 'time-based' ? (
+        ) : !isAppCheckIn && item.type === 'time-based' ? (
           <TouchableOpacity
             style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
             onPress={() => toggleTimeBased(item)}
@@ -325,7 +406,7 @@ export default function DailyLogScreen() {
               <MaterialCommunityIcons name="clock-outline" size={18} color="#555" />
             )}
           </TouchableOpacity>
-        ) : (item.type === 'numeral' || item.type === 'tiered') ? (
+        ) : !isAppCheckIn && (item.type === 'numeral' || item.type === 'tiered') ? (
           <View style={styles.stepper}>
             <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, -1)}>
               <Text style={styles.stepBtnText}>−</Text>
@@ -375,6 +456,13 @@ export default function DailyLogScreen() {
             <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, 1)}>
               <Text style={styles.stepBtnText}>+</Text>
             </TouchableOpacity>
+          </View>
+        ) : isAppCheckIn ? (
+          <View style={styles.autoHabitBadge}>
+            <Text style={styles.autoHabitValue}>
+              {typeof log?.value === 'number' ? log.value : 0}
+            </Text>
+            <MaterialCommunityIcons name="check-circle" size={20} color="#818cf8" />
           </View>
         ) : null}
       </TouchableOpacity>
@@ -808,4 +896,16 @@ const styles = StyleSheet.create({
   },
   moodLogCue: { fontSize: 13, color: '#c4b5fd' },
   moodLogRoutine: { fontSize: 12, color: '#818cf8' },
+  // Auto-habit styles
+  cooldownText: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
+  autoHabitBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#1e1b4b',
+    borderRadius: 8,
+  },
+  autoHabitValue: { fontSize: 16, fontWeight: '600', color: '#818cf8' },
 });
