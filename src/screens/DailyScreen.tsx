@@ -266,12 +266,17 @@ export default function DailyLogScreen() {
     setCurrentDate(d);
   }
 
+  function handleEditHabit(habit: Habit) {
+    setEditingHabit(habit);
+    setShowForm(true);
+  }
+
   function renderHabitItem({ item }: { item: Habit }) {
     const log = logs.get(item.id);
     const starsEarned = log?.starsEarned ?? 0;
 
     return (
-      <View style={styles.habitRow}>
+      <TouchableOpacity style={styles.habitRow} onPress={() => handleEditHabit(item)}>
         <View style={styles.habitInfo}>
           <Text style={styles.habitName}>{item.name}</Text>
         </View>
@@ -362,7 +367,7 @@ export default function DailyLogScreen() {
             </TouchableOpacity>
           </View>
         ) : null}
-      </View>
+      </TouchableOpacity>
     );
   }
 
