@@ -331,24 +331,29 @@ export default function DailyLogScreen() {
               <Text style={styles.stepBtnText}>−</Text>
             </TouchableOpacity>
             {editingId === item.id ? (
-              <TextInput
-                style={styles.stepValueInput}
-                value={editDraft}
-                onChangeText={setEditDraft}
-                keyboardType="numeric"
-                autoFocus
-                selectTextOnFocus
-                onBlur={() => {
-                  const parsed = parseInt(editDraft, 10);
-                  setNumeralValue(item, isNaN(parsed) ? 0 : parsed);
-                  setEditingId(null);
-                }}
-                onSubmitEditing={() => {
-                  const parsed = parseInt(editDraft, 10);
-                  setNumeralValue(item, isNaN(parsed) ? 0 : parsed);
-                  setEditingId(null);
-                }}
-              />
+              <View style={styles.stepValueContainer}>
+                <TextInput
+                  style={styles.stepValueInput}
+                  value={editDraft}
+                  onChangeText={setEditDraft}
+                  keyboardType="numeric"
+                  autoFocus
+                  selectTextOnFocus
+                  onBlur={() => {
+                    const parsed = parseInt(editDraft, 10);
+                    setNumeralValue(item, isNaN(parsed) ? 0 : parsed);
+                    setEditingId(null);
+                  }}
+                  onSubmitEditing={() => {
+                    const parsed = parseInt(editDraft, 10);
+                    setNumeralValue(item, isNaN(parsed) ? 0 : parsed);
+                    setEditingId(null);
+                  }}
+                />
+                {item.unit ? (
+                  <Text style={styles.stepUnitText}>{item.unit}</Text>
+                ) : null}
+              </View>
             ) : (
               <TouchableOpacity
                 onPress={() => {
@@ -357,9 +362,14 @@ export default function DailyLogScreen() {
                   setEditingId(item.id);
                 }}
               >
-                <Text style={styles.stepValue}>
-                  {typeof log?.value === 'number' ? log.value : 0}{item.unit ? ` ${item.unit}` : ''}
-                </Text>
+                <View style={styles.stepValueContainer}>
+                  <Text style={styles.stepValue}>
+                    {typeof log?.value === 'number' ? log.value : 0}
+                  </Text>
+                  {item.unit ? (
+                    <Text style={styles.stepUnitText}>{item.unit}</Text>
+                  ) : null}
+                </View>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, 1)}>
@@ -645,8 +655,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stepBtnText: { fontSize: 22, color: '#818cf8', fontWeight: 'bold' },
-  stepValue: { fontSize: 15, fontWeight: '500', minWidth: 56, textAlign: 'center', color: '#f0f0f0' },
+  stepValueContainer: {
+    alignItems: 'center',
+    minWidth: 56,
+  },
+  stepValue: { fontSize: 15, fontWeight: '500', textAlign: 'center', color: '#f0f0f0' },
   stepValueInput: { fontSize: 15, fontWeight: '500', width: 40, flexGrow: 0, textAlign: 'center', color: '#f0f0f0', borderBottomWidth: 1, borderBottomColor: '#818cf8', paddingVertical: 2 },
+  stepUnitText: { fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 2 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#555', fontSize: 16, textAlign: 'center', paddingHorizontal: 40 },
   // Tasks section
