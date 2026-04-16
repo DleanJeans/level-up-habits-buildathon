@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Android APK
+  ota-update:
+    name: Send OTA Update
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,7 +19,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Setup EAS
+      - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -28,5 +28,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build APK
-        run: eas build --platform android --profile preview --non-interactive
+      - name: Send OTA Update
+        run: eas update --branch preview --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+
+  local-build:
+    name: Build APK Locally
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APK locally
+        run: eas build --platform android --profile preview --local --non-interactive --output ./build-output.apk
+
+      - name: Upload APK to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-preview-apk
+          path: ./build-output.apk
+          retention-days: 30
