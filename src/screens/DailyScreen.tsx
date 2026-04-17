@@ -41,6 +41,7 @@ import WebContainer from '../components/WebContainer';
 import HabitForm from '../components/HabitForm';
 import DateNav from '../components/DateNav';
 import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
+import StarRewardAnimation from '../components/StarRewardAnimation';
 
 export default function DailyLogScreen() {
   const insets = useSafeAreaInsets();
@@ -69,6 +70,9 @@ export default function DailyLogScreen() {
   const [editingLog, setEditingLog] = useState<{ habit: Habit; log: HabitLog } | null>(null);
   // App check-in cooldown
   const [appCheckInCooldown, setAppCheckInCooldown] = useState(0);
+  // Star animation
+  const [showStarAnimation, setShowStarAnimation] = useState(false);
+  const [starAnimationValue, setStarAnimationValue] = useState(0);
 
   const dateStr = formatDate(currentDate);
 
@@ -147,6 +151,11 @@ export default function DailyLogScreen() {
       loggedAt: new Date().toISOString(),
     };
     await saveLog(log);
+
+    // Show star animation for the stars earned
+    setStarAnimationValue(starsEarned);
+    setShowStarAnimation(true);
+
     loadData();
   }, [dateStr, loadData]);
 
@@ -497,6 +506,14 @@ export default function DailyLogScreen() {
         onSave={handleSaveLogTime}
         onCancel={() => setEditingLog(null)}
       />
+
+      {/* Star reward animation */}
+      {showStarAnimation && (
+        <StarRewardAnimation
+          stars={starAnimationValue}
+          onComplete={() => setShowStarAnimation(false)}
+        />
+      )}
 
       {/* Date navigation */}
       <DateNav currentDate={currentDate} onChangeDate={changeDate} />
