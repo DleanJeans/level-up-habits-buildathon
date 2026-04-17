@@ -181,7 +181,8 @@ export default function TimelineScreen() {
                       <Text
                         style={[
                           styles.entryName,
-                          !entry.habit.isGood && styles.badText,
+                          entry.habit.category === 'bad' && styles.badText,
+                          entry.habit.category === 'neutral' && styles.neutralText,
                         ]}
                       >
                         {entry.habit.name}
@@ -263,6 +264,7 @@ const styles = StyleSheet.create({
   entryName: { fontSize: 15, fontWeight: '500', color: '#f0f0f0' },
   entryValue: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
   badText: { color: '#f87171' },
+  neutralText: { color: '#9ca3af' },
   entryStars: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingTop: 4 },
   starText: { fontSize: 13, color: '#4ade80', fontWeight: '500' },
   negativeStars: { color: '#f87171' },

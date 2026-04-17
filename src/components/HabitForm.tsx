@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
-import { Cue, CueType, Frequency, Habit, HabitType, Reminder, Tier, TimeFrame } from '../models/types';
+import { Cue, CueType, Frequency, Habit, HabitCategory, HabitType, Reminder, Tier, TimeFrame } from '../models/types';
 import { getHabits } from '../store/storage';
 import WebContainer from './WebContainer';
 
@@ -32,7 +32,9 @@ const HABIT_TYPES: { value: HabitType; label: string; icon: string }[] = [
 export default function HabitForm({ habit, onSave, onCancel }: Props) {
   const [name, setName] = useState(habit?.name || '');
   const [type, setType] = useState<HabitType>(habit?.type || 'checkbox');
-  const [isGood, setIsGood] = useState(habit?.isGood ?? true);
+  const [category, setCategory] = useState<HabitCategory>(
+    habit?.category || (habit?.isGood !== undefined ? (habit.isGood ? 'good' : 'bad') : 'good')
+  );
   const [stars, setStars] = useState(String(habit?.stars ?? 1));
   const [unit, setUnit] = useState(habit?.unit || 'mins');
   // Numeral (flat conversion) state
@@ -80,7 +82,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
       id: habit?.id || uuidv4(),
       name: name.trim(),
       type,
-      isGood,
+      category,
       stars: parseFloat(stars) || 1,
       frequency,
     };
@@ -228,22 +230,52 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
         ))}
       </View>
 
-      <View style={styles.row}>
-        <Text style={styles.label}>Good habit</Text>
-        <Switch value={isGood} onValueChange={setIsGood} />
-        <View style={[styles.badge, isGood ? styles.goodBadge : styles.badBadge]}>
+      <Text style={styles.label}>Habit Category</Text>
+      <View style={styles.categoryRow}>
+        <TouchableOpacity
+          style={[styles.categoryBtn, category === 'good' && styles.categoryBtnGood]}
+          onPress={() => setCategory('good')}
+        >
           <MaterialCommunityIcons
-            name={isGood ? 'thumb-up' : 'thumb-down'}
-            size={12}
-            color={isGood ? '#4ade80' : '#f87171'}
+            name="thumb-up"
+            size={16}
+            color={category === 'good' ? '#4ade80' : '#9ca3af'}
           />
-          <Text style={[styles.badgeText, isGood ? styles.goodBadgeText : styles.badBadgeText]}>
-            {isGood ? 'Good' : 'Bad'}
+          <Text style={[styles.categoryBtnText, category === 'good' && styles.categoryBtnTextGood]}>
+            Good
           </Text>
-        </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.categoryBtn, category === 'neutral' && styles.categoryBtnNeutral]}
+          onPress={() => setCategory('neutral')}
+        >
+          <MaterialCommunityIcons
+            name="minus-circle-outline"
+            size={16}
+            color={category === 'neutral' ? '#9ca3af' : '#6b7280'}
+          />
+          <Text style={[styles.categoryBtnText, category === 'neutral' && styles.categoryBtnTextNeutral]}>
+            Neutral
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.categoryBtn, category === 'bad' && styles.categoryBtnBad]}
+          onPress={() => setCategory('bad')}
+        >
+          <MaterialCommunityIcons
+            name="thumb-down"
+            size={16}
+            color={category === 'bad' ? '#f87171' : '#9ca3af'}
+          />
+          <Text style={[styles.categoryBtnText, category === 'bad' && styles.categoryBtnTextBad]}>
+            Bad
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {type === 'checkbox' && (
+      {type === 'checkbox' && category !== 'neutral' && (
         <>
           <View style={styles.starsLabelRow}>
             <Text style={styles.starsLabel}>Stars</Text>
@@ -271,34 +303,38 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
             placeholderTextColor="#555"
           />
 
-          <Text style={styles.label}>Conversion rate</Text>
-          <View style={styles.tierRow}>
-            <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
-              <TextInput
-                style={styles.innerInput}
-                value={convPer}
-                onChangeText={setConvPer}
-                keyboardType="decimal-pad"
-                placeholder="1"
-                placeholderTextColor="#555"
-              />
-              <Text style={styles.inputSuffix} numberOfLines={1}>{unit}</Text>
-            </View>
+          {category !== 'neutral' && (
+            <>
+              <Text style={styles.label}>Conversion rate</Text>
+              <View style={styles.tierRow}>
+                <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
+                  <TextInput
+                    style={styles.innerInput}
+                    value={convPer}
+                    onChangeText={setConvPer}
+                    keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor="#555"
+                  />
+                  <Text style={styles.inputSuffix} numberOfLines={1}>{unit}</Text>
+                </View>
 
-            <Text style={styles.tierArrow}>→</Text>
-            
-            <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
-              <TextInput
-                style={styles.innerInput}
-                value={convStars}
-                onChangeText={setConvStars}
-                keyboardType="decimal-pad"
-                placeholder="1"
-                placeholderTextColor="#555"
-              />
-              <MaterialCommunityIcons name="star" size={16} color="#facc15" style={{ paddingRight: 10 }} />
-            </View>
-          </View>
+                <Text style={styles.tierArrow}>→</Text>
+
+                <View style={[styles.input, styles.tierInput, styles.inputWithSuffix]}>
+                  <TextInput
+                    style={styles.innerInput}
+                    value={convStars}
+                    onChangeText={setConvStars}
+                    keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor="#555"
+                  />
+                  <MaterialCommunityIcons name="star" size={16} color="#facc15" style={{ paddingRight: 10 }} />
+                </View>
+              </View>
+            </>
+          )}
         </>
       )}
 
@@ -313,60 +349,64 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
             placeholderTextColor="#555"
           />
 
-          <Text style={styles.label}>Tiers (value → stars)</Text>
-          {tiers.map((tier, i) => (
-            <View key={i} style={styles.tierRow}>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={String(tier.value)}
-                onChangeText={(v) => updateTier(i, 'value', v)}
-                keyboardType="decimal-pad"
-                placeholder="Value"
-                placeholderTextColor="#555"
-              />
-              <Text style={styles.tierArrow}>→</Text>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={String(tier.stars)}
-                onChangeText={(v) => updateTier(i, 'stars', v)}
-                keyboardType="decimal-pad"
-                placeholder="Stars"
-                placeholderTextColor="#555"
-              />
-              <MaterialCommunityIcons name="star" size={16} color="#facc15" />
-            </View>
-          ))}
+          {category !== 'neutral' && (
+            <>
+              <Text style={styles.label}>Tiers (value → stars)</Text>
+              {tiers.map((tier, i) => (
+                <View key={i} style={styles.tierRow}>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={String(tier.value)}
+                    onChangeText={(v) => updateTier(i, 'value', v)}
+                    keyboardType="decimal-pad"
+                    placeholder="Value"
+                    placeholderTextColor="#555"
+                  />
+                  <Text style={styles.tierArrow}>→</Text>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={String(tier.stars)}
+                    onChangeText={(v) => updateTier(i, 'stars', v)}
+                    keyboardType="decimal-pad"
+                    placeholder="Stars"
+                    placeholderTextColor="#555"
+                  />
+                  <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+                </View>
+              ))}
 
-          <View style={styles.row}>
-            <Text style={styles.label}>Extra stars rule</Text>
-            <Switch value={hasExtra} onValueChange={setHasExtra} />
-          </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Extra stars rule</Text>
+                <Switch value={hasExtra} onValueChange={setHasExtra} />
+              </View>
 
-          {hasExtra && (
-            <View style={styles.tierRow}>
-              <Text style={styles.text}>Every </Text>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={extraPer}
-                onChangeText={setExtraPer}
-                keyboardType="decimal-pad"
-                placeholderTextColor="#555"
-              />
-              <Text style={styles.text}> {unit} →</Text>
-              <TextInput
-                style={[styles.input, styles.tierInput]}
-                value={extraStars}
-                onChangeText={setExtraStars}
-                keyboardType="decimal-pad"
-                placeholderTextColor="#555"
-              />
-              <MaterialCommunityIcons name="star" size={16} color="#facc15" />
-            </View>
+              {hasExtra && (
+                <View style={styles.tierRow}>
+                  <Text style={styles.text}>Every </Text>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={extraPer}
+                    onChangeText={setExtraPer}
+                    keyboardType="decimal-pad"
+                    placeholderTextColor="#555"
+                  />
+                  <Text style={styles.text}> {unit} →</Text>
+                  <TextInput
+                    style={[styles.input, styles.tierInput]}
+                    value={extraStars}
+                    onChangeText={setExtraStars}
+                    keyboardType="decimal-pad"
+                    placeholderTextColor="#555"
+                  />
+                  <MaterialCommunityIcons name="star" size={16} color="#facc15" />
+                </View>
+              )}
+            </>
           )}
         </>
       )}
 
-      {type === 'time-based' && (
+      {type === 'time-based' && category !== 'neutral' && (
         <>
           <View style={styles.starsLabelRow}>
             <Text style={styles.starsLabel}>Fallback Stars</Text>
@@ -427,7 +467,7 @@ export default function HabitForm({ habit, onSave, onCancel }: Props) {
         </>
       )}
 
-      {(type === 'numeral' || type === 'tiered') && (
+      {(type === 'numeral' || type === 'tiered') && category !== 'neutral' && (
         <>
           <View style={styles.row}>
             <Text style={styles.label}>Starting stars</Text>
@@ -642,6 +682,27 @@ const styles = StyleSheet.create({
   typeBtnActive: { borderColor: '#6366f1', backgroundColor: '#1e1b4b' },
   typeBtnText: { fontSize: 13, color: '#9ca3af' },
   typeBtnTextActive: { color: '#818cf8', fontWeight: '600' },
+  categoryRow: { flexDirection: 'row', gap: 8, marginVertical: 6 },
+  categoryBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+    alignItems: 'center',
+    flexDirection: 'column',
+    gap: 6,
+    minHeight: 60,
+    justifyContent: 'center',
+  },
+  categoryBtnGood: { borderColor: '#4ade80', backgroundColor: '#14532d' },
+  categoryBtnNeutral: { borderColor: '#9ca3af', backgroundColor: '#374151' },
+  categoryBtnBad: { borderColor: '#f87171', backgroundColor: '#7f1d1d' },
+  categoryBtnText: { fontSize: 13, color: '#9ca3af', fontWeight: '500' },
+  categoryBtnTextGood: { color: '#4ade80', fontWeight: '600' },
+  categoryBtnTextNeutral: { color: '#d1d5db', fontWeight: '600' },
+  categoryBtnTextBad: { color: '#f87171', fontWeight: '600' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 },
   badgeText: { fontSize: 12 },
   goodBadge: { backgroundColor: '#14532d' },

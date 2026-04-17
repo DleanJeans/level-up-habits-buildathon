@@ -95,5 +95,14 @@ export function calculateStars(
   }
 
   stars = roundToStep(stars);
-  return habit.isGood ? stars : -stars;
+
+  // Neutral habits earn 0 stars (tracking only)
+  if (habit.category === 'neutral') {
+    return 0;
+  }
+
+  // Good habits earn positive stars, bad habits earn negative stars
+  // For backwards compatibility with old data
+  const category = habit.category || (habit.isGood ? 'good' : 'bad');
+  return category === 'good' ? stars : -stars;
 }
