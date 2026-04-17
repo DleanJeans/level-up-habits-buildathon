@@ -155,7 +155,7 @@ export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: W
   return (
     <View style={styles.container}>
       <GestureDetector gesture={swipeGesture}>
-        <View style={styles.animationContainer}>
+        <View style={[styles.animationContainer, { width: effectiveWidth, marginHorizontal: 16 }]}>
           <Animated.View
             style={[
               styles.daysWrapper,
@@ -164,9 +164,9 @@ export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: W
               },
             ]}
           >
-            <View style={[styles.weeksRow, { maxWidth: windowWidth }]}>
+            <View style={[styles.weeksRow, { width: effectiveWidth }]}>
               {/* Current week */}
-              <View style={[styles.daysContainer, { maxWidth, width: effectiveWidth }]}>
+              <View style={[styles.daysContainer, { width: effectiveWidth }]}>
                 {weekDays.map((day) => (
                   <TouchableOpacity
                     key={day.dateStr}
@@ -221,7 +221,7 @@ export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: W
 
               {/* Next week (shown during animation) */}
               {nextWeekDays.length > 0 && (
-                <View style={[styles.daysContainer, { maxWidth, width: effectiveWidth, marginLeft: 16 }]}>
+                <View style={[styles.daysContainer, { width: effectiveWidth, marginLeft: 16 }]}>
                   {nextWeekDays.map((day) => (
                     <View
                       key={day.dateStr}
@@ -289,7 +289,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   daysWrapper: {
-    paddingHorizontal: 16,
   },
   weeksRow: {
     flexDirection: 'row',
@@ -301,14 +300,14 @@ const styles = StyleSheet.create({
   },
   dayCard: {
     flex: 1,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 4,
     backgroundColor: '#1a1a2e',
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
-    aspectRatio: 1,
+    minHeight: 80,
     justifyContent: 'center',
   },
   dayCardSelected: {
@@ -323,7 +322,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#9ca3af',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   dayOfWeekSelected: {
     color: '#c4b5fd',
@@ -335,7 +334,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#f0f0f0',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   dayNumSelected: {
     color: '#fff',
