@@ -8,9 +8,11 @@ const MOOD_LOGS_PREFIX = 'mood_logs_';
 const SETTINGS_KEY = 'settings';
 
 export type TimeFormat = '12' | '24';
+export type WeekStartDay = 'sunday' | 'monday';
 
 export interface Settings {
   timeFormat: TimeFormat;
+  weekStartDay: WeekStartDay;
 }
 
 // --- Habits ---
@@ -206,6 +208,7 @@ export function formatDate(d: Date): string {
 
 const defaultSettings: Settings = {
   timeFormat: '24',
+  weekStartDay: 'monday',
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -225,6 +228,17 @@ export async function getTimeFormat(): Promise<TimeFormat> {
 export async function setTimeFormat(format: TimeFormat): Promise<void> {
   const settings = await getSettings();
   settings.timeFormat = format;
+  await saveSettings(settings);
+}
+
+export async function getWeekStartDay(): Promise<WeekStartDay> {
+  const settings = await getSettings();
+  return settings.weekStartDay;
+}
+
+export async function setWeekStartDay(weekStartDay: WeekStartDay): Promise<void> {
+  const settings = await getSettings();
+  settings.weekStartDay = weekStartDay;
   await saveSettings(settings);
 }
 

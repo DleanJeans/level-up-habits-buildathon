@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { formatDate, getDayTotal } from '../store/storage';
+import { formatDate, getDayTotal, getWeekStartDay, WeekStartDay } from '../store/storage';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
 interface WeekNavProps {
@@ -19,17 +19,28 @@ interface DayInfo {
   stars: number;
 }
 
-function getWeekDays(selectedDate: Date): DayInfo[] {
+function getWeekDays(selectedDate: Date, weekStartDay: WeekStartDay): DayInfo[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Get the start of the week (Sunday)
+  // Get the start of the week based on user preference
   const startOfWeek = new Date(selectedDate);
-  startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
+  const currentDay = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const startDayOffset = weekStartDay === 'monday' ? 1 : 0;
+
+  // Calculate days to subtract to get to the start of week
+  let daysToSubtract = currentDay - startDayOffset;
+  if (daysToSubtract < 0) {
+    daysToSubtract += 7;
+  }
+
+  startOfWeek.setDate(selectedDate.getDate() - daysToSubtract);
   startOfWeek.setHours(0, 0, 0, 0);
 
   const days: DayInfo[] = [];
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = weekStartDay === 'monday'
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   for (let i = 0; i < 7; i++) {
     const date = new Date(startOfWeek);
@@ -44,7 +55,7 @@ function getWeekDays(selectedDate: Date): DayInfo[] {
     days.push({
       date,
       dateStr: formatDate(date),
-      dayOfWeek: dayNames[date.getDay()],
+      dayOfWeek: dayNames[i],
       dayNum: date.getDate(),
       isToday: compareDate.getTime() === today.getTime(),
       isSelected: compareDate.getTime() === compareSelected.getTime(),
@@ -56,12 +67,23 @@ function getWeekDays(selectedDate: Date): DayInfo[] {
 }
 
 export default function WeekNav({ currentDate, onChangeDate }: WeekNavProps) {
-  const [weekDays, setWeekDays] = useState<DayInfo[]>(() => getWeekDays(currentDate));
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const [weekStartDay, setWeekStartDayState] = useState<WeekStartDay>('monday');
+  const [weekDays, setWeekDays] = useState<DayInfo[]>(() => getWeekDays(currentDate, 'monday'));
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    async function loadWeekStartDay() {
+      const startDay = await getWeekStartDay();
+      setWeekStartDayState(startDay);
+    }
+    loadWeekStartDay();
+  }, []);
 
   useEffect(() => {
     async function loadStars() {
-      const days = getWeekDays(currentDate);
+      const days = getWeekDays(currentDate, weekStartDay);
       const daysWithStars = await Promise.all(
         days.map(async (day) => ({
           ...day,
@@ -71,9 +93,30 @@ export default function WeekNav({ currentDate, onChangeDate }: WeekNavProps) {
       setWeekDays(daysWithStars);
     }
     loadStars();
-  }, [currentDate]);
+  }, [currentDate, weekStartDay]);
 
   function changeWeek(delta: number) {
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+    const direction = delta > 0 ? 1 : -1;
+
+    // Slide animation
+    Animated.sequence([
+      Animated.timing(slideAnim, {
+        toValue: -direction * 20,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsAnimating(false);
+    });
+
     const newDate = new Date(currentDate);
     newDate.setDate(currentDate.getDate() + delta * 7);
     onChangeDate(newDate);
@@ -96,65 +139,96 @@ export default function WeekNav({ currentDate, onChangeDate }: WeekNavProps) {
       }
     });
 
+  // Calculate responsive width for day cards
+  const containerPadding = 32; // 16px on each side
+  const gap = 8;
+  const totalGaps = 6 * gap; // 6 gaps between 7 days
+  const maxWidth = 600; // Max width for web landscape
+  const effectiveWidth = Math.min(windowWidth - containerPadding, maxWidth);
+  const dayCardWidth = (effectiveWidth - totalGaps) / 7;
+
   return (
     <View style={styles.container}>
-      <GestureDetector gesture={swipeGesture}>
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.daysContainer}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => changeWeek(-1)}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          disabled={isAnimating}
         >
-          {weekDays.map((day) => (
-            <TouchableOpacity
-              key={day.dateStr}
-              style={[
-                styles.dayCard,
-                day.isSelected && styles.dayCardSelected,
-                day.isToday && !day.isSelected && styles.dayCardToday,
-              ]}
-              onPress={() => selectDay(day)}
-              activeOpacity={0.7}
-            >
-              <Text
+          <MaterialCommunityIcons name="chevron-left" size={28} color="#818cf8" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity
+          onPress={() => changeWeek(1)}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          disabled={isAnimating}
+        >
+          <MaterialCommunityIcons name="chevron-right" size={28} color="#818cf8" />
+        </TouchableOpacity>
+      </View>
+
+      <GestureDetector gesture={swipeGesture}>
+        <Animated.View
+          style={[
+            styles.daysWrapper,
+            {
+              transform: [{ translateX: slideAnim }],
+            },
+          ]}
+        >
+          <View style={[styles.daysContainer, { maxWidth, alignSelf: 'center', width: '100%' }]}>
+            {weekDays.map((day) => (
+              <TouchableOpacity
+                key={day.dateStr}
                 style={[
-                  styles.dayOfWeek,
-                  day.isSelected && styles.dayOfWeekSelected,
-                  day.isToday && !day.isSelected && styles.dayOfWeekToday,
+                  styles.dayCard,
+                  { width: dayCardWidth },
+                  day.isSelected && styles.dayCardSelected,
+                  day.isToday && !day.isSelected && styles.dayCardToday,
                 ]}
+                onPress={() => selectDay(day)}
+                activeOpacity={0.7}
               >
-                {day.dayOfWeek}
-              </Text>
-              <Text
-                style={[
-                  styles.dayNum,
-                  day.isSelected && styles.dayNumSelected,
-                  day.isToday && !day.isSelected && styles.dayNumToday,
-                ]}
-              >
-                {day.dayNum}
-              </Text>
-              <View style={styles.starsRow}>
                 <Text
                   style={[
-                    styles.starsText,
-                    day.isSelected && styles.starsTextSelected,
-                    day.isToday && !day.isSelected && styles.starsTextToday,
+                    styles.dayOfWeek,
+                    day.isSelected && styles.dayOfWeekSelected,
+                    day.isToday && !day.isSelected && styles.dayOfWeekToday,
                   ]}
                 >
-                  {day.stars > 0 ? day.stars.toFixed(0) : '–'}
+                  {day.dayOfWeek}
                 </Text>
-                {day.stars > 0 && (
-                  <MaterialCommunityIcons
-                    name="star"
-                    size={12}
-                    color={day.isSelected ? '#fbbf24' : day.isToday ? '#818cf8' : '#ca8a04'}
-                  />
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Text
+                  style={[
+                    styles.dayNum,
+                    day.isSelected && styles.dayNumSelected,
+                    day.isToday && !day.isSelected && styles.dayNumToday,
+                  ]}
+                >
+                  {day.dayNum}
+                </Text>
+                <View style={styles.starsRow}>
+                  <Text
+                    style={[
+                      styles.starsText,
+                      day.isSelected && styles.starsTextSelected,
+                      day.isToday && !day.isSelected && styles.starsTextToday,
+                    ]}
+                  >
+                    {day.stars > 0 ? day.stars.toFixed(0) : '–'}
+                  </Text>
+                  {day.stars > 0 && (
+                    <MaterialCommunityIcons
+                      name="star"
+                      size={12}
+                      color={day.isSelected ? '#fbbf24' : day.isToday ? '#818cf8' : '#ca8a04'}
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Animated.View>
       </GestureDetector>
     </View>
   );
@@ -171,21 +245,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 8,
   },
-  headerText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  daysWrapper: {
+    paddingHorizontal: 16,
   },
   daysContainer: {
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: 8,
   },
   dayCard: {
-    width: 48,
+    flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     backgroundColor: '#1a1a2e',
     borderRadius: 10,
     alignItems: 'center',
