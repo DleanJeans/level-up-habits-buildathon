@@ -81,10 +81,16 @@ export default function HabitsScreen() {
             )}
           </View>
           <View style={styles.habitMetaRow}>
-            {!item.isGood && (
+            {item.category === 'bad' && (
               <View style={styles.starsMetaRow}>
                 <MaterialCommunityIcons name="close-circle" size={12} color="#f87171" />
                 <Text style={[styles.habitMeta, styles.badText]}> Bad · </Text>
+              </View>
+            )}
+            {item.category === 'neutral' && (
+              <View style={styles.starsMetaRow}>
+                <MaterialCommunityIcons name="minus-circle-outline" size={12} color="#9ca3af" />
+                <Text style={[styles.habitMeta, styles.neutralText]}> Neutral · </Text>
               </View>
             )}
             {item.type === 'checkbox' ? (
@@ -180,6 +186,7 @@ const styles = StyleSheet.create({
   starsMetaRow: { flexDirection: 'row', alignItems: 'center' },
   habitMeta: { fontSize: 12, color: '#888' },
   badText: { color: '#f87171' },
+  neutralText: { color: '#9ca3af' },
   freqBadge: { marginLeft: 6, backgroundColor: '#1e1b4b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   freqBadgeText: { fontSize: 10, color: '#818cf8', fontWeight: '600' },
   deleteBtn: { padding: 10, marginRight: -6 },

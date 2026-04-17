@@ -83,8 +83,11 @@ export default function DailyLogScreen() {
       getMoodLogsForDate(dateStr),
     ]);
     setAllHabits(h);
-    // Filter to daily good habits only (bad habits and non-daily habits don't show on daily view)
-    const dailyHabits = h.filter((habit) => (habit.frequency || 'daily') === 'daily' && habit.isGood !== false);
+    // Filter to daily habits only (exclude bad habits from daily view)
+    const dailyHabits = h.filter((habit) => {
+      const category = habit.category || (habit.isGood ? 'good' : 'bad');
+      return (habit.frequency || 'daily') === 'daily' && category !== 'bad';
+    });
     // Sort habits: auto-habits first, then others
     dailyHabits.sort((a, b) => {
       if (a.isAutoHabit && !b.isAutoHabit) return -1;

@@ -17,7 +17,30 @@ export interface Settings {
 
 export async function getHabits(): Promise<Habit[]> {
   const json = await AsyncStorage.getItem(HABITS_KEY);
-  return json ? JSON.parse(json) : [];
+  if (!json) return [];
+
+  const habits: Habit[] = JSON.parse(json);
+
+  // Migration: convert old isGood boolean to category
+  let needsMigration = false;
+  habits.forEach((habit) => {
+    if (!habit.category && habit.isGood !== undefined) {
+      habit.category = habit.isGood ? 'good' : 'bad';
+      needsMigration = true;
+    }
+    // Ensure category has a default value if both are missing
+    if (!habit.category) {
+      habit.category = 'good';
+      needsMigration = true;
+    }
+  });
+
+  // Save migrated data if needed
+  if (needsMigration) {
+    await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(habits));
+  }
+
+  return habits;
 }
 
 export async function saveHabit(habit: Habit): Promise<void> {
@@ -218,7 +241,7 @@ export async function ensureAutoHabits(): Promise<void> {
       id: APP_CHECK_IN_ID,
       name: 'App Check-in',
       type: 'numeral',
-      isGood: true,
+      category: 'good',
       stars: 1,
       unit: 'check-ins',
       conversion: { per: 1, stars: 1 }, // 1 check-in = 1 star
