@@ -69,8 +69,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-    outputs:
-      apk-name: ${{ steps.build.outputs.apk-name }}
     env:
       npm_config_user_agent: pnpm
     steps:
@@ -98,18 +96,13 @@ jobs:
       - name: Build APK
         id: build
         run: |
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          APK_NAME="level-up-habits-${TIMESTAMP}.apk"
           eas build --platform android --profile preview --local --non-interactive --output ./build-output.apk
-          mv ./build-output.apk "./${APK_NAME}"
-          echo "apk-path=./${APK_NAME}" >> $GITHUB_OUTPUT
-          echo "apk-name=${APK_NAME}" >> $GITHUB_OUTPUT
 
       - name: Upload APK artifact (temporary)
         uses: actions/upload-artifact@v7
         with:
           name: android-preview-apk-temp
-          path: ${{ steps.build.outputs.apk-path }}
+          path: ./build-output.apk
           retention-days: 1
           archive: false
           if-no-files-found: error
@@ -128,12 +121,20 @@ jobs:
           name: android-preview-apk-temp
           path: ./
 
+      - name: Rename APK with timestamp
+        id: rename
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          APK_NAME="level-up-habits-${TIMESTAMP}.apk"
+          mv ./build-output.apk "./${APK_NAME}"
+          echo "apk-name=${APK_NAME}" >> $GITHUB_OUTPUT
+
       - name: Upload APK artifact (final)
         uses: actions/upload-artifact@v7
         id: upload-artifact
         with:
-          name: ${{ needs.build-apk.outputs.apk-name }}
-          path: ./${{ needs.build-apk.outputs.apk-name }}
+          name: ${{ steps.rename.outputs.apk-name }}
+          path: ./${{ steps.rename.outputs.apk-name }}
           retention-days: 30
           archive: false
           if-no-files-found: error
