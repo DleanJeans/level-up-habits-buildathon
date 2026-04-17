@@ -28,8 +28,7 @@
     },
     "plugins": [
       "expo-font",
-      "@react-native-community/datetimepicker",
-      "react-native-reanimated/plugin"
+      "@react-native-community/datetimepicker"
     ],
     "updates": {
       "url": "https://u.expo.dev/c8c12214-78b8-46a7-a027-2c79327d4cb2"
