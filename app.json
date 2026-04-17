@@ -3,6 +3,7 @@
     "name": "level-up-habits",
     "slug": "level-up-habits",
     "version": "0.0.1",
+    "scheme": "exp+level-up-habits",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -29,6 +30,12 @@
       "expo-font",
       "@react-native-community/datetimepicker"
     ],
+    "updates": {
+      "url": "https://u.expo.dev/c8c12214-78b8-46a7-a027-2c79327d4cb2"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "eas": {
         "projectId": "c8c12214-78b8-46a7-a027-2c79327d4cb2"
