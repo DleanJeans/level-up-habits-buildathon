@@ -79,6 +79,7 @@ export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: W
   const scrollViewRef = useRef<ScrollView>(null);
   const [days, setDays] = useState<DayInfo[]>(() => getPastDays(currentDate, 30));
 
+  // Load stars when component mounts
   useEffect(() => {
     async function loadStars() {
       const pastDays = getPastDays(currentDate, 30);
@@ -91,6 +92,16 @@ export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: W
       setDays(daysWithStars);
     }
     loadStars();
+  }, []); // Only run on mount
+
+  // Update selection when currentDate changes
+  useEffect(() => {
+    setDays((prevDays) =>
+      prevDays.map((day) => ({
+        ...day,
+        isSelected: day.date.getTime() === new Date(currentDate).setHours(0, 0, 0, 0),
+      }))
+    );
   }, [currentDate]);
 
   // Scroll to the end (today) when component mounts or days change
@@ -105,7 +116,7 @@ export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: W
     onChangeDate(day.date);
   }
 
-  const dayCardWidth = 70; // Fixed width for each day card
+  const dayCardWidth = 55; // Fixed width for each day card
 
   return (
     <View style={styles.container}>
