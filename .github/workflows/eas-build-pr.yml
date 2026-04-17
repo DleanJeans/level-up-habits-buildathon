@@ -1,4 +1,4 @@
-name: EAS Android Preview Build for PRs
+name: EAS (PR)
 
 on:
   pull_request:
