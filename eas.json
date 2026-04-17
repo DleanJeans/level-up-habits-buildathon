@@ -7,12 +7,14 @@
       "android": {
         "buildType": "apk"
       },
-      "channel": "preview"
+      "channel": "preview",
+      "node": "22.22.2"
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "node": "22.22.2"
     }
   },
   "submit": {
