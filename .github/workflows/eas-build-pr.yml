@@ -99,19 +99,19 @@ jobs:
         run: |
           eas build --platform android --profile preview --local --non-interactive --output ./build-output.apk
 
-      - name: Compress APK as ZIP
-        id: compress
+      - name: Rename APK with timestamp
+        id: rename
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          ZIP_NAME="level-up-habits-${TIMESTAMP}.zip"
-          zip "${ZIP_NAME}" ./build-output.apk
-          echo "zip-name=${ZIP_NAME}" >> $GITHUB_OUTPUT
+          APK_NAME="level-up-habits-${TIMESTAMP}.apk"
+          mv ./build-output.apk "./${APK_NAME}"
+          echo "apk-name=${APK_NAME}" >> $GITHUB_OUTPUT
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.compress.outputs.zip-name }}
-          path: ./${{ steps.compress.outputs.zip-name }}
+          name: ${{ steps.rename.outputs.apk-name }}
+          path: ./${{ steps.rename.outputs.apk-name }}
           retention-days: 30
           if-no-files-found: error
 
