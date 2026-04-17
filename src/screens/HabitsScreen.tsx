@@ -4,16 +4,15 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Alert,
   StyleSheet,
   Modal,
-  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Habit } from '../models/types';
 import { getHabits, saveHabit, deleteHabit } from '../store/storage';
 import HabitForm from '../components/HabitForm';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import WebContainer from '../components/WebContainer';
 
@@ -22,6 +21,7 @@ export default function HabitsScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
 
   const loadHabits = useCallback(async () => {
     const h = await getHabits();
@@ -42,25 +42,19 @@ export default function HabitsScreen() {
   }
 
   function handleDelete(habit: Habit) {
-    if (Platform.OS === 'web') {
-      // Use window.confirm for web platform since Alert.alert is not supported
-      if (window.confirm(`Delete "${habit.name}"?`)) {
-        deleteHabit(habit.id).then(() => loadHabits());
-      }
-    } else {
-      // Use native Alert for iOS and Android
-      Alert.alert('Delete Habit', `Delete "${habit.name}"?`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteHabit(habit.id);
-            loadHabits();
-          },
-        },
-      ]);
+    setHabitToDelete(habit);
+  }
+
+  async function confirmDelete() {
+    if (habitToDelete) {
+      await deleteHabit(habitToDelete.id);
+      setHabitToDelete(null);
+      loadHabits();
     }
+  }
+
+  function cancelDelete() {
+    setHabitToDelete(null);
   }
 
   function handleEdit(habit: Habit) {
@@ -170,6 +164,17 @@ export default function HabitsScreen() {
           }}
         />
       </Modal>
+
+      <ConfirmDialog
+        visible={!!habitToDelete}
+        title="Delete Habit"
+        message={habitToDelete ? `Delete "${habitToDelete.name}"?` : ''}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        destructive
+      />
     </View>
     </WebContainer>
   );
