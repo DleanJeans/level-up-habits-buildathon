@@ -60,6 +60,7 @@ export default function HabitsScreen() {
   }
 
   function renderHabit({ item }: { item: Habit }) {
+    if (item.isAutoHabit) return null; // Auto-habits are system-managed; hide from the editable list
     return (
       <TouchableOpacity style={styles.habitRow} onPress={() => handleEdit(item)}>
         <View style={styles.habitInfo}>

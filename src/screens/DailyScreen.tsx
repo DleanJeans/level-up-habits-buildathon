@@ -114,9 +114,6 @@ export default function DailyLogScreen() {
     const today = formatDate(new Date());
     if (dateStr !== today) return; // Only auto-log for today
 
-    const canLog = await canLogAppCheckIn(dateStr);
-    if (!canLog) return;
-
     const appCheckInId = getAppCheckInHabitId();
     const habits = await getHabits();
     const appCheckInHabit = habits.find((h) => h.id === appCheckInId);
@@ -125,6 +122,20 @@ export default function DailyLogScreen() {
     const logs = await getLogsForDate(dateStr);
     const existingLog = logs.find((l) => l.habitId === appCheckInId);
     const currentValue = typeof existingLog?.value === 'number' ? existingLog.value : 0;
+
+    // Fix stale starsEarned: if an existing log has the wrong star count (e.g. 0
+    // due to a previous migration bug), correct it without needing a new check-in.
+    if (existingLog && currentValue > 0) {
+      const expectedStars = calculateStars(appCheckInHabit, currentValue);
+      if (existingLog.starsEarned !== expectedStars) {
+        await saveLog({ ...existingLog, starsEarned: expectedStars });
+        loadData();
+      }
+    }
+
+    const canLog = await canLogAppCheckIn(dateStr);
+    if (!canLog) return;
+
     const newValue = currentValue + 1;
 
     const starsEarned = calculateStars(appCheckInHabit, newValue);

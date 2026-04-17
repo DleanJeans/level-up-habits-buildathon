@@ -252,9 +252,20 @@ export async function ensureAutoHabits(): Promise<void> {
   if (!existingAppCheckIn) {
     // Create new App Check-in habit if it doesn't exist
     await saveHabit(appCheckInHabit);
-  } else if (!existingAppCheckIn.category) {
-    // Update existing habit if it's missing the category field (migration from old version)
-    await saveHabit({ ...existingAppCheckIn, category: 'good' });
+  } else {
+    // Always ensure critical fields match the canonical definition so that any
+    // drift (e.g. missing conversion, wrong type, old isGood-only migration)
+    // is corrected on the next app launch.
+    const needsUpdate =
+      existingAppCheckIn.type !== appCheckInHabit.type ||
+      !existingAppCheckIn.conversion ||
+      existingAppCheckIn.conversion.per !== appCheckInHabit.conversion!.per ||
+      existingAppCheckIn.conversion.stars !== appCheckInHabit.conversion!.stars ||
+      existingAppCheckIn.category !== appCheckInHabit.category ||
+      !existingAppCheckIn.cooldownMinutes;
+    if (needsUpdate) {
+      await saveHabit({ ...existingAppCheckIn, ...appCheckInHabit });
+    }
   }
 }
 
