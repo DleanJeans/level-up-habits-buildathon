@@ -45,11 +45,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const updateId = '${{ steps.ota-update.outputs.update-id }}';
-            const projectId = 'c8c12214-78b8-46a7-a027-2c79327d4cb2';
-            const dashboardUrl = updateId
-              ? `https://expo.dev/accounts/dleanjeans/projects/level-up-habits/updates/${updateId}`
-              : `https://expo.dev/accounts/dleanjeans/projects/level-up-habits/updates`;
+            const dashboardUrl = `https://expo.dev/accounts/dleanjeans/projects/level-up-habits/updates`;
             const comment = `### 🚀 OTA Update Sent
 
             Preview update has been sent to the \`preview\` channel!
