@@ -39,6 +39,7 @@ jobs:
   build-and-release:
     name: Build APK and Create Release
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
     env:
