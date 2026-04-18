@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Habit, HabitLog } from '../models/types';
 import { getHabits, getLogsForDate, saveLog, formatDate } from '../store/storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import WebContainer from '../components/WebContainer';
 import WeekNav from '../components/WeekNav';
 import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DailyHeader from '../components/DailyHeader';
 
 const HIDE_AUTO_HABITS_KEY = 'timeline_hide_auto_habits';
 
@@ -31,6 +32,7 @@ function formatTime(d: Date): string {
 
 export default function TimelineScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [totalStars, setTotalStars] = useState(0);
@@ -38,6 +40,13 @@ export default function TimelineScreen() {
   const [hideAutoHabits, setHideAutoHabits] = useState(false);
 
   const dateStr = formatDate(currentDate);
+
+  // Update header with totalStars
+  useEffect(() => {
+    navigation.setOptions({
+      header: () => <DailyHeader totalStars={totalStars} />,
+    });
+  }, [navigation, totalStars]);
 
   const loadData = useCallback(async () => {
     const [habits, logs, savedHideAutoHabits] = await Promise.all([

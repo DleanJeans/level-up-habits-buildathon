@@ -128,7 +128,6 @@ export default function App() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="calendar-today" size={22} color={color} />
             ),
-            headerTitle: 'Level Up Habits',
           }}
         />
         <Tab.Screen

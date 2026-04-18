@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Habit, HabitLog, Task, MoodLog, CueType } from '../models/types';
 import {
   getHabits,
@@ -42,9 +42,11 @@ import WebContainer from '../components/WebContainer';
 import HabitForm from '../components/HabitForm';
 import WeekNav from '../components/WeekNav';
 import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
+import DailyHeader from '../components/DailyHeader';
 
 export default function DailyLogScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<Map<string, HabitLog>>(new Map());
@@ -74,6 +76,13 @@ export default function DailyLogScreen() {
   const [appCheckInCount, setAppCheckInCount] = useState(0);
 
   const dateStr = formatDate(currentDate);
+
+  // Update header with totalStars
+  useEffect(() => {
+    navigation.setOptions({
+      header: () => <DailyHeader totalStars={totalStars} />,
+    });
+  }, [navigation, totalStars]);
 
   const loadData = useCallback(async () => {
     // Ensure auto-habits exist
@@ -507,17 +516,6 @@ export default function DailyLogScreen() {
       {/* Week navigation */}
       <WeekNav currentDate={currentDate} onChangeDate={changeDate} />
 
-      {/* Daily star total */}
-      <View style={styles.totalBox}>
-        <Text style={styles.totalLabel}>Daily Stars</Text>
-        <View style={styles.totalValueRow}>
-          <Text style={styles.totalValue}>
-            {totalStars.toFixed(2).replace(/\.?0+$/, '')}
-          </Text>
-          <MaterialCommunityIcons name="star" size={28} color="#fbbf24" />
-        </View>
-      </View>
-
       {/* Reminder banners */}
       {reminderBanners.map((banner, i) => (
         <View key={i} style={styles.reminderBanner}>
@@ -707,20 +705,6 @@ export default function DailyLogScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
-  totalValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  totalBox: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 12,
-    padding: 14,
-    backgroundColor: '#1c1a14',
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ca8a04',
-  },
-  totalLabel: { fontSize: 13, color: '#fde68a', fontWeight: '500' },
-  totalValue: { fontSize: 28, fontWeight: 'bold', color: '#fbbf24' },
   list: { paddingHorizontal: 16, paddingBottom: 20 },
   habitRow: {
     flexDirection: 'row',
