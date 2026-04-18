@@ -73,12 +73,25 @@ export async function getLogsForDate(date: string): Promise<HabitLog[]> {
 
 export async function saveLog(log: HabitLog): Promise<void> {
   const logs = await getLogsForDate(log.date);
-  const idx = logs.findIndex((l) => l.habitId === log.habitId);
-  if (idx >= 0) {
-    logs[idx] = log;
+
+  // If the log has an ID, treat it as a separate entry (for multiple logs per habit per day)
+  if (log.id) {
+    const idx = logs.findIndex((l) => l.id === log.id);
+    if (idx >= 0) {
+      logs[idx] = log;
+    } else {
+      logs.push(log);
+    }
   } else {
-    logs.push(log);
+    // Otherwise, replace any existing log for this habitId (traditional behavior)
+    const idx = logs.findIndex((l) => l.habitId === log.habitId && !l.id);
+    if (idx >= 0) {
+      logs[idx] = log;
+    } else {
+      logs.push(log);
+    }
   }
+
   await AsyncStorage.setItem(logsKey(log.date), JSON.stringify(logs));
 }
 
@@ -275,13 +288,24 @@ export function getAppCheckInHabitId(): string {
 
 export async function canLogAppCheckIn(date: string): Promise<boolean> {
   const logs = await getLogsForDate(date);
-  const checkInLog = logs.find((l) => l.habitId === APP_CHECK_IN_ID);
+  const checkInLogs = logs.filter((l) => l.habitId === APP_CHECK_IN_ID);
 
-  if (!checkInLog || !checkInLog.loggedAt) {
+  if (checkInLogs.length === 0) {
     return true;
   }
 
-  const lastLogTime = new Date(checkInLog.loggedAt).getTime();
+  // Find the most recent check-in log
+  const mostRecentLog = checkInLogs.reduce((latest, current) => {
+    if (!current.loggedAt) return latest;
+    if (!latest || !latest.loggedAt) return current;
+    return new Date(current.loggedAt) > new Date(latest.loggedAt) ? current : latest;
+  }, checkInLogs[0]);
+
+  if (!mostRecentLog || !mostRecentLog.loggedAt) {
+    return true;
+  }
+
+  const lastLogTime = new Date(mostRecentLog.loggedAt).getTime();
   const now = Date.now();
   const cooldownMs = 15 * 60 * 1000; // 15 minutes in milliseconds
 
@@ -290,13 +314,24 @@ export async function canLogAppCheckIn(date: string): Promise<boolean> {
 
 export async function getAppCheckInCooldownRemaining(date: string): Promise<number> {
   const logs = await getLogsForDate(date);
-  const checkInLog = logs.find((l) => l.habitId === APP_CHECK_IN_ID);
+  const checkInLogs = logs.filter((l) => l.habitId === APP_CHECK_IN_ID);
 
-  if (!checkInLog || !checkInLog.loggedAt) {
+  if (checkInLogs.length === 0) {
     return 0;
   }
 
-  const lastLogTime = new Date(checkInLog.loggedAt).getTime();
+  // Find the most recent check-in log
+  const mostRecentLog = checkInLogs.reduce((latest, current) => {
+    if (!current.loggedAt) return latest;
+    if (!latest || !latest.loggedAt) return current;
+    return new Date(current.loggedAt) > new Date(latest.loggedAt) ? current : latest;
+  }, checkInLogs[0]);
+
+  if (!mostRecentLog || !mostRecentLog.loggedAt) {
+    return 0;
+  }
+
+  const lastLogTime = new Date(mostRecentLog.loggedAt).getTime();
   const now = Date.now();
   const cooldownMs = 15 * 60 * 1000; // 15 minutes in milliseconds
   const elapsed = now - lastLogTime;
@@ -306,4 +341,10 @@ export async function getAppCheckInCooldownRemaining(date: string): Promise<numb
   }
 
   return Math.ceil((cooldownMs - elapsed) / 1000); // Return seconds remaining
+}
+
+export async function getAppCheckInCount(date: string): Promise<number> {
+  const logs = await getLogsForDate(date);
+  const checkInLogs = logs.filter((l) => l.habitId === APP_CHECK_IN_ID);
+  return checkInLogs.length;
 }

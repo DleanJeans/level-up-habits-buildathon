@@ -83,6 +83,7 @@ export interface Habit {
 }
 
 export interface HabitLog {
+  id?: string; // Optional unique ID for logs that need to be separate (e.g., multiple check-ins per day)
   habitId: string;
   date: string; // YYYY-MM-DD
   value: number | boolean;

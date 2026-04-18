@@ -158,7 +158,7 @@ export default function TimelineScreen() {
               <View key={seg}>
                 <Text style={styles.segmentTitle}>{seg}</Text>
                 {grouped.get(seg)!.map((entry, i) => (
-                  <View key={entry.log.habitId} style={styles.entryRow}>
+                  <View key={entry.log.id || entry.log.habitId} style={styles.entryRow}>
                     <View style={styles.timelineTrack}>
                       <View style={styles.dot} />
                       {i < grouped.get(seg)!.length - 1 && <View style={styles.line} />}
