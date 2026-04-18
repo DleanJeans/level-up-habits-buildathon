@@ -362,11 +362,7 @@ export default function DailyLogScreen() {
       >
         <View style={styles.habitInfo}>
           <Text style={styles.habitName}>{item.name}</Text>
-          {isAppCheckIn && appCheckInCooldown > 0 && (
-            <Text style={styles.cooldownText}>
-              Next reward in: {formatCooldown(appCheckInCooldown)}
-            </Text>
-          )}
+
         </View>
         {(starsEarned !== 0 || ((item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt)) && (
           <View style={styles.starCol}>
@@ -470,21 +466,23 @@ export default function DailyLogScreen() {
               <Text style={styles.checkInCountText}>{appCheckInCount}</Text>
               <MaterialCommunityIcons name="check-circle" size={16} color="#818cf8" />
             </View>
-            <TouchableOpacity
-              style={[
-                styles.claimButton,
-                (!isToday || appCheckInCooldown > 0) && styles.claimButtonDisabled,
-              ]}
-              onPress={manualLogAppCheckIn}
-              disabled={!isToday || appCheckInCooldown > 0}
-            >
-              <Text style={[
-                styles.claimButtonText,
-                (!isToday || appCheckInCooldown > 0) && styles.claimButtonTextDisabled,
-              ]}>
-                Claim
-              </Text>
-            </TouchableOpacity>
+            {isToday && (
+              <TouchableOpacity
+                style={[
+                  styles.claimButton,
+                  appCheckInCooldown > 0 && styles.claimButtonDisabled,
+                ]}
+                onPress={manualLogAppCheckIn}
+                disabled={appCheckInCooldown > 0}
+              >
+                <Text style={[
+                  styles.claimButtonText,
+                  appCheckInCooldown > 0 && styles.claimButtonTextDisabled,
+                ]}>
+                  {appCheckInCooldown > 0 ? formatCooldown(appCheckInCooldown) : 'Claim'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : null}
       </TouchableOpacity>
