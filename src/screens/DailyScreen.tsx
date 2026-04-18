@@ -40,7 +40,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { v4 as uuidv4 } from 'uuid';
 import WebContainer from '../components/WebContainer';
 import HabitForm from '../components/HabitForm';
-import DateNav from '../components/DateNav';
+import WeekNav from '../components/WeekNav';
 import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
 
 export default function DailyLogScreen() {
@@ -331,10 +331,8 @@ export default function DailyLogScreen() {
     loadData();
   }
 
-  function changeDate(delta: number) {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() + delta);
-    setCurrentDate(d);
+  function changeDate(date: Date) {
+    setCurrentDate(date);
   }
 
   function handleEditHabit(habit: Habit) {
@@ -508,8 +506,8 @@ export default function DailyLogScreen() {
         onCancel={() => setEditingLog(null)}
       />
 
-      {/* Date navigation */}
-      <DateNav currentDate={currentDate} onChangeDate={changeDate} />
+      {/* Week navigation */}
+      <WeekNav currentDate={currentDate} onChangeDate={changeDate} />
 
       {/* Daily star total */}
       <View style={styles.totalBox}>
