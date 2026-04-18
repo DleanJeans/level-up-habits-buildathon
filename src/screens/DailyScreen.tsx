@@ -152,39 +152,6 @@ export default function DailyLogScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Reset to current week if not already on it
-      const today = new Date();
-      const todayStr = formatDate(today);
-      const currentDateStr = formatDate(currentDate);
-
-      // Check if we're in the current week
-      const isCurrentWeek = () => {
-        const todayWeekStart = new Date(today);
-        const currentWeekStart = new Date(currentDate);
-
-        // Calculate Monday of both weeks
-        const todayDay = todayWeekStart.getDay();
-        const currentDay = currentWeekStart.getDay();
-
-        let todayDaysToMonday = todayDay - 1;
-        if (todayDaysToMonday < 0) todayDaysToMonday += 7;
-
-        let currentDaysToMonday = currentDay - 1;
-        if (currentDaysToMonday < 0) currentDaysToMonday += 7;
-
-        todayWeekStart.setDate(todayWeekStart.getDate() - todayDaysToMonday);
-        currentWeekStart.setDate(currentWeekStart.getDate() - currentDaysToMonday);
-
-        todayWeekStart.setHours(0, 0, 0, 0);
-        currentWeekStart.setHours(0, 0, 0, 0);
-
-        return todayWeekStart.getTime() === currentWeekStart.getTime();
-      };
-
-      if (!isCurrentWeek()) {
-        setCurrentDate(today);
-      }
-
       loadData().then(() => autoLogAppCheckIn());
     }, [loadData, autoLogAppCheckIn])
   );
