@@ -74,6 +74,8 @@ export default function DailyLogScreen() {
   const [appCheckInCooldown, setAppCheckInCooldown] = useState(0);
   // App check-in count
   const [appCheckInCount, setAppCheckInCount] = useState(0);
+  // WeekNav refresh trigger
+  const [weekNavRefresh, setWeekNavRefresh] = useState(0);
 
   const dateStr = formatDate(currentDate);
 
@@ -123,6 +125,9 @@ export default function DailyLogScreen() {
     // Update app check-in count
     const count = await getAppCheckInCount(dateStr);
     setAppCheckInCount(count);
+
+    // Trigger WeekNav refresh
+    setWeekNavRefresh((prev) => prev + 1);
   }, [dateStr]);
 
   // Manual check-in for app check-in button
@@ -514,7 +519,7 @@ export default function DailyLogScreen() {
       />
 
       {/* Week navigation */}
-      <WeekNav currentDate={currentDate} onChangeDate={changeDate} />
+      <WeekNav currentDate={currentDate} onChangeDate={changeDate} refreshTrigger={weekNavRefresh} />
 
       {/* Reminder banners */}
       {reminderBanners.map((banner, i) => (

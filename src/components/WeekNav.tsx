@@ -7,6 +7,7 @@ interface WeekNavProps {
   currentDate: Date;
   onChangeDate: (date: Date) => void;
   onResetToToday?: () => void;
+  refreshTrigger?: number; // Increment to trigger refresh
 }
 
 interface DayInfo {
@@ -75,11 +76,11 @@ function getPastDays(selectedDate: Date, numDays: number = 30): DayInfo[] {
   return days;
 }
 
-export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: WeekNavProps) {
+export default function WeekNav({ currentDate, onChangeDate, onResetToToday, refreshTrigger }: WeekNavProps) {
   const scrollViewRef = useRef<ScrollView>(null);
   const [days, setDays] = useState<DayInfo[]>(() => getPastDays(currentDate, 30));
 
-  // Load stars when component mounts
+  // Load stars when component mounts or when refreshTrigger changes
   useEffect(() => {
     async function loadStars() {
       const pastDays = getPastDays(currentDate, 30);
@@ -92,7 +93,7 @@ export default function WeekNav({ currentDate, onChangeDate, onResetToToday }: W
       setDays(daysWithStars);
     }
     loadStars();
-  }, []); // Only run on mount
+  }, [refreshTrigger]); // Reload when refreshTrigger changes
 
   // Update selection when currentDate changes
   useEffect(() => {
