@@ -42,6 +42,7 @@ import WebContainer from '../components/WebContainer';
 import HabitForm from '../components/HabitForm';
 import WeekNav from '../components/WeekNav';
 import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
+import LogNumeralDialog from '../components/LogNumeralDialog';
 import DailyHeader from '../components/DailyHeader';
 
 export default function DailyLogScreen() {
@@ -49,10 +50,8 @@ export default function DailyLogScreen() {
   const navigation = useNavigation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [logs, setLogs] = useState<Map<string, HabitLog>>(new Map());
+  const [logs, setLogs] = useState<Map<string, HabitLog[]>>(new Map());
   const [totalStars, setTotalStars] = useState(0);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState('');
   // Tasks
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskName, setNewTaskName] = useState('');
@@ -70,6 +69,8 @@ export default function DailyLogScreen() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   // Edit log time
   const [editingLog, setEditingLog] = useState<{ habit: Habit; log: HabitLog } | null>(null);
+  // Log numeral dialog
+  const [loggingNumeral, setLoggingNumeral] = useState<Habit | null>(null);
   // App check-in cooldown
   const [appCheckInCooldown, setAppCheckInCooldown] = useState(0);
   // App check-in count
@@ -109,8 +110,12 @@ export default function DailyLogScreen() {
       return 0;
     });
     setHabits(dailyHabits);
-    const logMap = new Map<string, HabitLog>();
-    l.forEach((log) => logMap.set(log.habitId, log));
+    const logMap = new Map<string, HabitLog[]>();
+    l.forEach((log) => {
+      const existing = logMap.get(log.habitId) || [];
+      existing.push(log);
+      logMap.set(log.habitId, existing);
+    });
     setLogs(logMap);
     setTasks(t);
     setMoodLogs(ml);
@@ -179,7 +184,8 @@ export default function DailyLogScreen() {
   }, [appCheckInCooldown, dateStr]);
 
   async function toggleCheckbox(habit: Habit) {
-    const existing = logs.get(habit.id);
+    const existingLogs = logs.get(habit.id) || [];
+    const existing = existingLogs.find(log => !log.id); // Find log without unique ID (old behavior)
     const newValue = existing ? !existing.value : true;
     const now = new Date().toISOString();
     const starsEarned = newValue ? calculateStars(habit, true, now) : 0;
@@ -212,26 +218,31 @@ export default function DailyLogScreen() {
     loadData();
   }
 
-  async function updateNumeral(habit: Habit, delta: number) {
-    const existing = logs.get(habit.id);
-    const currentVal = existing ? (typeof existing.value === 'number' ? existing.value : 0) : 0;
-    const newVal = Math.max(0, currentVal + delta);
-    const starsEarned = calculateStars(habit, newVal);
+  // Removed updateNumeral function - replaced with logNumeralWithTime
+
+  async function logNumeralWithTime(habit: Habit, repetition: number, hours: number, minutes: number) {
+    const starsEarned = calculateStars(habit, repetition);
+
+    const logDate = new Date(dateStr + 'T00:00:00');
+    logDate.setHours(hours, minutes, 0, 0);
 
     const log: HabitLog = {
+      id: uuidv4(), // Unique ID for each log entry
       habitId: habit.id,
       date: dateStr,
-      value: newVal,
+      value: repetition,
       starsEarned,
-      loggedAt: new Date().toISOString(),
+      loggedAt: logDate.toISOString(),
     };
     await saveLog(log);
+    setLoggingNumeral(null);
     loadData();
   }
 
   // --- Time-based habit: log as checked with current time ---
   async function toggleTimeBased(habit: Habit) {
-    const existing = logs.get(habit.id);
+    const existingLogs = logs.get(habit.id) || [];
+    const existing = existingLogs.find(log => !log.id); // Find log without unique ID (old behavior)
     const newValue = existing ? !existing.value : true;
     const now = new Date().toISOString();
     const starsEarned = newValue ? calculateStars(habit, true, now) : 0;
@@ -355,8 +366,18 @@ export default function DailyLogScreen() {
   }
 
   function renderHabitItem({ item }: { item: Habit }) {
-    const log = logs.get(item.id);
-    const starsEarned = log?.starsEarned ?? 0;
+    const habitLogs = logs.get(item.id) || [];
+
+    // For checkbox/time-based: use the log without an ID (old behavior)
+    const singleLog = habitLogs.find(log => !log.id) || habitLogs[habitLogs.length - 1];
+
+    // For numeral/tiered: sum all log values and stars
+    const totalValue = habitLogs.reduce((sum, log) => {
+      return sum + (typeof log.value === 'number' ? log.value : 0);
+    }, 0);
+    const totalStars = habitLogs.reduce((sum, log) => sum + log.starsEarned, 0);
+
+    const starsEarned = totalStars;
     const isAppCheckIn = item.isAutoHabit && item.id === getAppCheckInHabitId();
     const today = formatDate(new Date());
     const isToday = dateStr === today;
@@ -378,7 +399,7 @@ export default function DailyLogScreen() {
           <Text style={styles.habitName}>{item.name}</Text>
 
         </View>
-        {(starsEarned !== 0 || ((item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt)) && (
+        {(starsEarned !== 0 || ((item.type === 'checkbox' || item.type === 'time-based') && singleLog?.value === true && singleLog?.loggedAt)) && (
           <View style={styles.starCol}>
             {starsEarned !== 0 && (
               <View style={styles.starRow}>
@@ -389,14 +410,14 @@ export default function DailyLogScreen() {
                 <MaterialCommunityIcons name="star" size={13} color="#facc15" />
               </View>
             )}
-            {(item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt && !isAppCheckIn && (
+            {(item.type === 'checkbox' || item.type === 'time-based') && singleLog?.value === true && singleLog?.loggedAt && !isAppCheckIn && (
               <TouchableOpacity
-                onPress={() => setEditingLog({ habit: item, log: log! })}
+                onPress={() => setEditingLog({ habit: item, log: singleLog! })}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <View style={styles.completedTimeRow}>
                   <Text style={styles.completedTime}>
-                    {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(singleLog.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   <MaterialCommunityIcons name="pencil-outline" size={11} color="#4b5563" />
                 </View>
@@ -407,71 +428,37 @@ export default function DailyLogScreen() {
 
         {!isAppCheckIn && item.type === 'checkbox' ? (
           <TouchableOpacity
-            style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
+            style={[styles.checkbox, singleLog?.value === true && styles.checkboxChecked]}
             onPress={() => toggleCheckbox(item)}
           >
-            {log?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
+            {singleLog?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
           </TouchableOpacity>
         ) : !isAppCheckIn && item.type === 'time-based' ? (
           <TouchableOpacity
-            style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
+            style={[styles.checkbox, singleLog?.value === true && styles.checkboxChecked]}
             onPress={() => toggleTimeBased(item)}
           >
-            {log?.value === true ? (
+            {singleLog?.value === true ? (
               <MaterialCommunityIcons name="check" size={18} color="#fff" />
             ) : (
               <MaterialCommunityIcons name="clock-outline" size={18} color="#555" />
             )}
           </TouchableOpacity>
         ) : !isAppCheckIn && (item.type === 'numeral' || item.type === 'tiered') ? (
-          <View style={styles.stepper}>
-            <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, -1)}>
-              <Text style={styles.stepBtnText}>−</Text>
-            </TouchableOpacity>
-            {editingId === item.id ? (
-              <View style={styles.stepValueContainer}>
-                <TextInput
-                  style={styles.stepValueInput}
-                  value={editDraft}
-                  onChangeText={setEditDraft}
-                  keyboardType="numeric"
-                  autoFocus
-                  selectTextOnFocus
-                  onBlur={() => {
-                    const parsed = parseInt(editDraft, 10);
-                    setNumeralValue(item, isNaN(parsed) ? 0 : parsed);
-                    setEditingId(null);
-                  }}
-                  onSubmitEditing={() => {
-                    const parsed = parseInt(editDraft, 10);
-                    setNumeralValue(item, isNaN(parsed) ? 0 : parsed);
-                    setEditingId(null);
-                  }}
-                />
-                {item.unit ? (
-                  <Text style={styles.stepUnitText}>{item.unit}</Text>
-                ) : null}
-              </View>
-            ) : (
-              <TouchableOpacity
-                onPress={() => {
-                  const currentVal = typeof log?.value === 'number' ? log.value : 0;
-                  setEditDraft(String(currentVal));
-                  setEditingId(item.id);
-                }}
-              >
-                <View style={styles.stepValueContainer}>
-                  <Text style={styles.stepValue}>
-                    {typeof log?.value === 'number' ? log.value : 0}
-                  </Text>
-                  {item.unit ? (
-                    <Text style={styles.stepUnitText}>{item.unit}</Text>
-                  ) : null}
-                </View>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.stepBtn} onPress={() => updateNumeral(item, 1)}>
-              <Text style={styles.stepBtnText}>+</Text>
+          <View style={styles.numeralContainer}>
+            <View style={styles.numeralValueContainer}>
+              <Text style={styles.numeralValue}>
+                {totalValue}
+              </Text>
+              {item.unit ? (
+                <Text style={styles.numeralUnitText}>{item.unit}</Text>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              style={styles.logButton}
+              onPress={() => setLoggingNumeral(item)}
+            >
+              <Text style={styles.logButtonText}>Log</Text>
             </TouchableOpacity>
           </View>
         ) : isAppCheckIn ? (
@@ -516,6 +503,14 @@ export default function DailyLogScreen() {
         initialTime={editingLog?.log.loggedAt ? toHHMM(new Date(editingLog.log.loggedAt)) : ''}
         onSave={handleSaveLogTime}
         onCancel={() => setEditingLog(null)}
+      />
+
+      <LogNumeralDialog
+        visible={!!loggingNumeral}
+        habitName={loggingNumeral?.name ?? ''}
+        habitUnit={loggingNumeral?.unit}
+        onSave={(repetition, hours, minutes) => loggingNumeral && logNumeralWithTime(loggingNumeral, repetition, hours, minutes)}
+        onCancel={() => setLoggingNumeral(null)}
       />
 
       {/* Week navigation */}
@@ -742,6 +737,23 @@ const styles = StyleSheet.create({
   },
   checkboxChecked: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
   checkboxText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  numeralContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  numeralValueContainer: { alignItems: 'center', minWidth: 56 },
+  numeralValue: { fontSize: 15, fontWeight: '500', textAlign: 'center', color: '#f0f0f0' },
+  numeralUnitText: { fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 2 },
+  logButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  logButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stepBtn: {
     width: 44,
