@@ -101,6 +101,12 @@ export async function deleteLog(habitId: string, date: string): Promise<void> {
   await AsyncStorage.setItem(logsKey(date), JSON.stringify(filtered));
 }
 
+export async function deleteLogById(logId: string, date: string): Promise<void> {
+  const logs = await getLogsForDate(date);
+  const filtered = logs.filter((l) => l.id !== logId);
+  await AsyncStorage.setItem(logsKey(date), JSON.stringify(filtered));
+}
+
 // --- Tasks ---
 
 function tasksKey(date: string): string {

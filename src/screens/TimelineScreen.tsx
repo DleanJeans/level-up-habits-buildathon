@@ -3,13 +3,14 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Habit, HabitLog } from '../models/types';
-import { getHabits, getLogsForDate, saveLog, formatDate } from '../store/storage';
+import { getHabits, getLogsForDate, saveLog, formatDate, deleteLogById } from '../store/storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import WebContainer from '../components/WebContainer';
 import WeekNav from '../components/WeekNav';
 import EditTimeModal, { toHHMM } from '../components/EditTimeModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DailyHeader from '../components/DailyHeader';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const HIDE_AUTO_HABITS_KEY = 'timeline_hide_auto_habits';
 
@@ -38,6 +39,8 @@ export default function TimelineScreen() {
   const [totalStars, setTotalStars] = useState(0);
   const [editingEntry, setEditingEntry] = useState<TimelineEntry | null>(null);
   const [hideAutoHabits, setHideAutoHabits] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<TimelineEntry | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const dateStr = formatDate(currentDate);
 
@@ -106,6 +109,29 @@ export default function TimelineScreen() {
     await AsyncStorage.setItem(HIDE_AUTO_HABITS_KEY, String(newValue));
   }
 
+  function handleDelete(entry: TimelineEntry) {
+    setEntryToDelete(entry);
+    setShowDeleteDialog(true);
+  }
+
+  async function confirmDelete() {
+    if (entryToDelete && entryToDelete.log.id) {
+      await deleteLogById(entryToDelete.log.id, dateStr);
+      setShowDeleteDialog(false);
+      setTimeout(() => {
+        setEntryToDelete(null);
+      }, 300);
+      loadData();
+    }
+  }
+
+  function cancelDelete() {
+    setShowDeleteDialog(false);
+    setTimeout(() => {
+      setEntryToDelete(null);
+    }, 300);
+  }
+
   // Filter entries based on hideAutoHabits setting
   const filteredEntries = hideAutoHabits
     ? entries.filter((e) => !e.habit.isAutoHabit)
@@ -149,6 +175,25 @@ export default function TimelineScreen() {
         initialTime={editingEntry ? toHHMM(editingEntry.time) : ''}
         onSave={handleSaveTime}
         onCancel={() => setEditingEntry(null)}
+      />
+
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Delete Log"
+        message={
+          entryToDelete
+            ? `Delete ${entryToDelete.habit.name} log${
+                entryToDelete.log.starsEarned !== 0
+                  ? ` (${entryToDelete.log.starsEarned > 0 ? '+' : ''}${entryToDelete.log.starsEarned.toFixed(2).replace(/\.?0+$/, '')} ⭐)`
+                  : ''
+              }?`
+            : 'Delete this log?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        destructive={true}
       />
 
       <ScrollView
@@ -212,6 +257,16 @@ export default function TimelineScreen() {
                       </Text>
                       <MaterialCommunityIcons name="star" size={14} color="#facc15" />
                     </View>
+                    {entry.log.id && (
+                      <TouchableOpacity
+                        style={styles.deleteBtn}
+                        onPress={() => handleDelete(entry)}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <MaterialCommunityIcons name="delete-outline" size={20} color="#9ca3af" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))}
               </View>
@@ -277,5 +332,9 @@ const styles = StyleSheet.create({
   negativeStars: { color: '#f87171' },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
   emptyText: { color: '#555', fontSize: 16, marginTop: 12 },
+  deleteBtn: {
+    paddingLeft: 8,
+    paddingTop: 4,
+  },
 
 });
