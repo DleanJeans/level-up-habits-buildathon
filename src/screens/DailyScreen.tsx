@@ -50,7 +50,7 @@ export default function DailyLogScreen() {
   const navigation = useNavigation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [logs, setLogs] = useState<Map<string, HabitLog>>(new Map());
+  const [logs, setLogs] = useState<Map<string, HabitLog[]>>(new Map());
   const [totalStars, setTotalStars] = useState(0);
   // Tasks
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -108,8 +108,12 @@ export default function DailyLogScreen() {
       return 0;
     });
     setHabits(dailyHabits);
-    const logMap = new Map<string, HabitLog>();
-    l.forEach((log) => logMap.set(log.habitId, log));
+    const logMap = new Map<string, HabitLog[]>();
+    l.forEach((log) => {
+      const existing = logMap.get(log.habitId) || [];
+      existing.push(log);
+      logMap.set(log.habitId, existing);
+    });
     setLogs(logMap);
     setTasks(t);
     setMoodLogs(ml);
@@ -175,7 +179,8 @@ export default function DailyLogScreen() {
   }, [appCheckInCooldown, dateStr]);
 
   async function toggleCheckbox(habit: Habit) {
-    const existing = logs.get(habit.id);
+    const existingLogs = logs.get(habit.id) || [];
+    const existing = existingLogs.find(log => !log.id); // Find log without unique ID (old behavior)
     const newValue = existing ? !existing.value : true;
     const now = new Date().toISOString();
     const starsEarned = newValue ? calculateStars(habit, true, now) : 0;
@@ -211,18 +216,16 @@ export default function DailyLogScreen() {
   // Removed updateNumeral function - replaced with logNumeralWithTime
 
   async function logNumeralWithTime(habit: Habit, repetition: number, hours: number, minutes: number) {
-    const existing = logs.get(habit.id);
-    const currentVal = existing ? (typeof existing.value === 'number' ? existing.value : 0) : 0;
-    const newVal = Math.max(0, currentVal + repetition);
-    const starsEarned = calculateStars(habit, newVal);
+    const starsEarned = calculateStars(habit, repetition);
 
     const logDate = new Date(dateStr + 'T00:00:00');
     logDate.setHours(hours, minutes, 0, 0);
 
     const log: HabitLog = {
+      id: uuidv4(), // Unique ID for each log entry
       habitId: habit.id,
       date: dateStr,
-      value: newVal,
+      value: repetition,
       starsEarned,
       loggedAt: logDate.toISOString(),
     };
@@ -233,7 +236,8 @@ export default function DailyLogScreen() {
 
   // --- Time-based habit: log as checked with current time ---
   async function toggleTimeBased(habit: Habit) {
-    const existing = logs.get(habit.id);
+    const existingLogs = logs.get(habit.id) || [];
+    const existing = existingLogs.find(log => !log.id); // Find log without unique ID (old behavior)
     const newValue = existing ? !existing.value : true;
     const now = new Date().toISOString();
     const starsEarned = newValue ? calculateStars(habit, true, now) : 0;
@@ -357,8 +361,18 @@ export default function DailyLogScreen() {
   }
 
   function renderHabitItem({ item }: { item: Habit }) {
-    const log = logs.get(item.id);
-    const starsEarned = log?.starsEarned ?? 0;
+    const habitLogs = logs.get(item.id) || [];
+
+    // For checkbox/time-based: use the log without an ID (old behavior)
+    const singleLog = habitLogs.find(log => !log.id) || habitLogs[habitLogs.length - 1];
+
+    // For numeral/tiered: sum all log values and stars
+    const totalValue = habitLogs.reduce((sum, log) => {
+      return sum + (typeof log.value === 'number' ? log.value : 0);
+    }, 0);
+    const totalStars = habitLogs.reduce((sum, log) => sum + log.starsEarned, 0);
+
+    const starsEarned = totalStars;
     const isAppCheckIn = item.isAutoHabit && item.id === getAppCheckInHabitId();
     const today = formatDate(new Date());
     const isToday = dateStr === today;
@@ -380,7 +394,7 @@ export default function DailyLogScreen() {
           <Text style={styles.habitName}>{item.name}</Text>
 
         </View>
-        {(starsEarned !== 0 || ((item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt)) && (
+        {(starsEarned !== 0 || ((item.type === 'checkbox' || item.type === 'time-based') && singleLog?.value === true && singleLog?.loggedAt)) && (
           <View style={styles.starCol}>
             {starsEarned !== 0 && (
               <View style={styles.starRow}>
@@ -391,14 +405,14 @@ export default function DailyLogScreen() {
                 <MaterialCommunityIcons name="star" size={13} color="#facc15" />
               </View>
             )}
-            {(item.type === 'checkbox' || item.type === 'time-based') && log?.value === true && log?.loggedAt && !isAppCheckIn && (
+            {(item.type === 'checkbox' || item.type === 'time-based') && singleLog?.value === true && singleLog?.loggedAt && !isAppCheckIn && (
               <TouchableOpacity
-                onPress={() => setEditingLog({ habit: item, log: log! })}
+                onPress={() => setEditingLog({ habit: item, log: singleLog! })}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <View style={styles.completedTimeRow}>
                   <Text style={styles.completedTime}>
-                    {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(singleLog.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   <MaterialCommunityIcons name="pencil-outline" size={11} color="#4b5563" />
                 </View>
@@ -409,17 +423,17 @@ export default function DailyLogScreen() {
 
         {!isAppCheckIn && item.type === 'checkbox' ? (
           <TouchableOpacity
-            style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
+            style={[styles.checkbox, singleLog?.value === true && styles.checkboxChecked]}
             onPress={() => toggleCheckbox(item)}
           >
-            {log?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
+            {singleLog?.value === true && <MaterialCommunityIcons name="check" size={18} color="#fff" />}
           </TouchableOpacity>
         ) : !isAppCheckIn && item.type === 'time-based' ? (
           <TouchableOpacity
-            style={[styles.checkbox, log?.value === true && styles.checkboxChecked]}
+            style={[styles.checkbox, singleLog?.value === true && styles.checkboxChecked]}
             onPress={() => toggleTimeBased(item)}
           >
-            {log?.value === true ? (
+            {singleLog?.value === true ? (
               <MaterialCommunityIcons name="check" size={18} color="#fff" />
             ) : (
               <MaterialCommunityIcons name="clock-outline" size={18} color="#555" />
@@ -429,7 +443,7 @@ export default function DailyLogScreen() {
           <View style={styles.numeralContainer}>
             <View style={styles.numeralValueContainer}>
               <Text style={styles.numeralValue}>
-                {typeof log?.value === 'number' ? log.value : 0}
+                {totalValue}
               </Text>
               {item.unit ? (
                 <Text style={styles.numeralUnitText}>{item.unit}</Text>
